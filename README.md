@@ -20,6 +20,10 @@
 
 - Extrappolation of provided data from Frontier's API to calculate sunrise and sunset duration,<br/> Koppen climate classification, and length of each year / day in Earth units
 
+- Derived surface conditions of non-landable planets
+
+- Unique post-scan and post-touchdown summaries, including soil analysis and duration of daylight once disembarked
+
 - Customiztion, including the amount of detail read back by EDDI
 
 <br/>
