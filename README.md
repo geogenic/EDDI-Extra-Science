@@ -14,7 +14,7 @@
 
 ## Key Features
 
-- Integration with EDDI's text-to-speech responder
+- Integration with EDDI's text-to-speech responder and ED CoPilot's enhanced voice models
 
 - Information about scanned planets including atmosphere composition, sky color,<br/>types of volcanism, surface pressure and temperature, and much more
 
