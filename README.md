@@ -2,7 +2,7 @@
 <br/>
 
 ### What percentage of this planet's crust is made of ice?
-### How long does a sunrise last on this moon?
+### How long does a sunrise last on this planet?
 ### What might the surface conditions be like on this non-landable Earth-like world?
 ### What color will the sky be at noon under a 75% ammonia / 25% water atmosphere?
 ### Hypothetically,  on this body's surface, would an egg be fried or *instantly vaporized*?
