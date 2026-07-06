@@ -18,7 +18,7 @@
 
 - Information about scanned planets including atmosphere composition, sky color,<br/>types of volcanism, surface pressure and temperature, and much more
 
-- Extrappolation of provided data from Frontier's API to calculate sunrise and sunset duration,<br/> Koppen climate classification, and length of each year / day in Earth units
+- Extrappolation of provided data from Frontier's API to calculate sunrise and sunset duration,<br/> Koppen climate classification, length of each year / day in Earth units, and much more
 
 - Derived surface conditions of non-landable planets
 
