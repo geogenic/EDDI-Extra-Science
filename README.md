@@ -2,9 +2,12 @@
 <br/>
 
 # 📽️ [Demo Video](https://youtu.be/tK-4HsT9gO4)
-<br/>
 
 # 🔗 [Latest Release](https://github.com/geogenic/EDDI-Extra-Science/releases/latest)
+
+# ℹ️ [Knowledge Base / Wiki](https://github.com/geogenic/EDDI-Extra-Science/wiki)
+
+# ❔ [Frequently Asked Questions](https://github.com/geogenic/EDDI-Extra-Science/wiki)
 <br/>
 <br/>
 
@@ -33,8 +36,4 @@
 
 - Customiztion, including the amount of detail read back by EDDI
 
-<br/>
-<br/>
-<a href="https://github.com/geogenic/EDDI-Extra-Science/wiki">
-  <img src="https://img.shields.io/badge/📖-Project_Wiki-blue" width="200">
-</a>
+
