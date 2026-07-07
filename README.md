@@ -1,3 +1,6 @@
+### An alternate, customizable personality for EDDI aimed towards dedicated<br/>explorers and exobiologists in Elite: Dangerous.
+<br/>
+
 # 📽️ [Demo Video](https://youtu.be/tK-4HsT9gO4)
 <br/>
 
