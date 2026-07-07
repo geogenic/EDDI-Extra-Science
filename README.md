@@ -7,7 +7,7 @@
 
 # ℹ️ [Knowledge Base / Wiki](https://github.com/geogenic/EDDI-Extra-Science/wiki)
 
-# ❔ [Frequently Asked Questions](https://github.com/geogenic/EDDI-Extra-Science/wiki)
+# ℹ️ [Installation Instructions](https://github.com/geogenic/EDDI-Extra-Science/wiki/Installation-Instructions)
 <br/>
 <br/>
 
