@@ -1,4 +1,4 @@
-### An alternate, customizable personality for EDDI aimed towards dedicated<br/>explorers and exobiologists in Elite: Dangerous.
+### An alternate, customizable personality for EDDI aimed towards dedicated explorers and exobiologists in Elite: Dangerous.
 <br/>
 
 # 📽️ [Demo Video](https://youtu.be/tK-4HsT9gO4)
@@ -26,9 +26,9 @@
 
 - Integration with EDDI's text-to-speech responder and ED CoPilot's enhanced voice models
 
-- Information about scanned planets including atmosphere composition, sky color,<br/>types of volcanism, surface pressure and temperature, and much more
+- Information about scanned planets including atmosphere composition, sky color, types of volcanism, surface pressure and temperature, and much more
 
-- Extrappolation of provided data from Frontier's API to calculate sunrise and sunset duration,<br/> Koppen climate classification, length of each year / day in Earth units, and much more
+- Extrappolation of provided data from Frontier's API to calculate sunrise and sunset duration, Koppen climate classification, length of each year / day in Earth units, and much more
 
 - Derived surface conditions of non-landable planets
 
