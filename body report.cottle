@@ -1,0 +1,7 @@
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+
+{F("[EXTRA SCIENCE] Body Detail Report")}

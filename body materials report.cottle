@@ -1,0 +1,122 @@
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+
+{_ Function to round numbers dynamically _}
+{set abs(val) to:
+    {if val < 0:
+        {return val * -1}
+    |else:
+        {return val}
+    }
+}
+{set smartRound(val) to:
+    {set absVal to abs(val)}
+    {if absVal < 0.01:
+        {return round(val, 3)}
+    |elif absVal < 0.1:
+        {return round(val, 2)}
+    |elif absVal < 10:
+        {return round(val, 1)}
+    |else:
+        {return round(val, 0)}
+    }
+}
+
+{if !reportbody.name || reportbody.name = "":
+    {_ If it's still not possible to get the body name...  _}
+    Which body are you
+    {OneOf("asking about","referring to")}?
+|else:
+    {_ Define a function to obtain a material from inventory}
+    {set _inventory(required) to:
+        {for material in materials:
+            {if material.material = required:
+                {return material}
+            }
+        }
+    }
+
+    {set goodmaterials to []}
+    {set greatmaterials to []}
+    {set othermaterials to []}
+
+    {for material in reportbody.materials:
+        {set inventoryMat to _inventory(material.material)}
+        {if (state.reportmats >= 0 && inventoryMat.amount < inventoryMat.minimum && inventoryMat.minimum > 0)
+        || (state.reportmats >= 1 && inventoryMat.amount < inventoryMat.desired && inventoryMat.desired > 0)
+        || (state.reportmats >= 2):
+            {if material.percentage >= material.definition.greatpctbody && state.reportmatconc > -1:
+                {set greatmaterials to cat(greatmaterials, [material])}
+            |elif material.percentage >= material.definition.goodpctbody && state.reportmatconc > 0:
+                {set goodmaterials to cat(goodmaterials, [material])}
+            |elif state.reportmatconc > 1:
+                {set othermaterials to cat(othermaterials, [material])}
+            }
+        }
+    }
+
+    {_ Start speaking _}
+    {if len(goodmaterials) > 0 || len(greatmaterials) > 0 || len(othermaterials) > 0:
+        This {reportbody.planettype}
+        {OneOf("contains", "has")}
+    }
+
+    {if len(greatmaterials) > 0:
+        {OneOf("very high levels", "very large deposits")} of
+        {set cur to 0}
+        {set length to len(greatmaterials) - 1}
+        {while cur < len(greatmaterials):
+            {greatmaterials[cur].definition.name}
+            {if state.reportmatpercent > 0: at {smartRound(greatmaterials[cur].percentage)}% }
+            {set cur to cur + 1}
+            {if cur = length: and
+            |elif cur < length:,
+            }
+        }
+
+        {if len(goodmaterials) > 0 && len(othermaterials) = 0:
+            and
+        |elif len(goodmaterials) > 0 || len(othermaterials) > 0:
+            ,
+        }
+    }
+
+    {if len(goodmaterials) > 0:
+        {OneOf("high levels", "large deposits")} of
+        {set cur to 0}
+        {set length to len(goodmaterials) - 1}
+        {while cur < len(goodmaterials):
+            {goodmaterials[cur].definition.name}
+            {if state.reportmatpercent > 1: at {smartRound(goodmaterials[cur].percentage)}% }
+            {set cur to cur + 1}
+            {if cur = length: and
+            |elif cur < length:,
+            }
+        }
+    }
+   
+    {if (len(greatmaterials) > 0 || len(goodmaterials) > 0) && len(othermaterials) > 0:
+        and
+    }
+
+    {if len(othermaterials) > 0:
+        {OneOf("moderate levels", "modest deposits")} of
+        {set cur to 0}
+        {set length to len(othermaterials) - 1}
+        {while cur < len(othermaterials):
+            {othermaterials[cur].definition.name}
+            {if state.reportmatpercent > 2: at {smartRound(othermaterials[cur].percentage)}% }
+            {set cur to cur + 1}
+            {if cur = length: and
+            |elif cur < length:,
+            }
+        }
+    }
+   
+    {if len(goodmaterials) > 0 || len(greatmaterials) > 0 || len(othermaterials) > 0:
+        .
+    }
+}

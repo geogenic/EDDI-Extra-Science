@@ -1,0 +1,715 @@
+{_ Define function for converting decimals to fractions _}
+{set ToFraction(val) to: 
+    {if val < 0.1:
+        less than one tenth of
+    |elif val = 0.1:
+        one tenth of
+    |elif val = 0.125:
+        one eighth of
+    |elif val < 0.125:
+        less than one eighth of
+    |elif val = 0.2:
+        one fifth of
+    |elif val < 0.2:
+        less than one fifth of
+    |elif val = 0.25:
+        one quarter of
+    |elif val < 0.25:
+        less than one quarter of
+    |elif val = 0.33:
+        one third of
+    |elif val < 0.33:
+        less than one third of
+    |elif val = 0.5:
+        half of
+    |elif val < 0.5:
+        less than half of
+    |elif val = 0.75:
+        three quarters of
+    |elif val < 0.75:
+        less than three quarters of
+    |elif val >= 0.75 && val <= 1.25:
+        similar to
+    |else:
+        {round(val, 1)} times
+    }
+}
+
+{_ Function to round numbers dynamically _}
+{set abs(val) to:
+    {if val < 0:
+        {return val * -1}
+    |else:
+        {return val}
+    }
+}
+{set smartRound(val) to:
+    {set absVal to abs(val)}
+    {if absVal < 0.01:
+        {return round(val, 3)}
+    |elif absVal < 0.1:
+        {return round(val, 2)}
+    |elif absVal < 10:
+        {return round(val, 1)}
+    |else:
+        {return round(val, 0)}
+    }
+}
+
+{_ Define functions for converting temperature scales _}
+{set ToCelsius(kelvin) to: {smartRound(kelvin - 273)}}
+{set ToFahrenheit(kelvin) to: {smartRound((kelvin-273)*9/5 + 32)}}
+{set TempCalc(kelvin) to: 
+    {if state.reportatmotempscale = 0: {smartRound(kelvin)}}
+    {if state.reportatmotempscale = 1: {ToCelsius(kelvin)}}
+    {if state.reportatmotempscale = 2: {ToFahrenheit(kelvin)}}
+}
+
+{_ Name our temperature scale _}
+{if state.reportatmotempscale = 0: {set tempscale to: Kelvin}}
+{if state.reportatmotempscale = 1: {set tempscale to: degrees Celsius}}
+{if state.reportatmotempscale = 2: {set tempscale to: degrees Fahrenheit}}
+
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+{if !reportbody.name || reportbody.name = "":
+    I'm not sure which body you are asking about.
+}
+
+{set topGas to reportbody.atmospherecompositions[0].name}
+{set topGasPercent to round(reportbody.atmospherecompositions[0].percent, 1)}
+{set gasName to topGas}
+
+{if topGasPercent > 0:    
+    {if state.immersion > 0 && find(reportbody.planettype, "giant") >= 0:
+            
+        {_ Gas Giants _}
+        
+        {OneOf("Albedo", "Reflectivity", "Ionization")} scan is complete.
+        
+        {_ Map custom scientific names for specific gases _}
+        {if find(topGas, "Helium") >= 0: 
+            {set gasName to cat("noble gasses, with the highest concentration being ", topGas)}
+        |elif find(topGas, "Water") >= 0: 
+            {set gasName to OneOf("water vapor", "water")}
+        |elif find(topGas, "Hydrogen") >= 0: 
+            {set gasName to "hydrogen"}
+        |else:
+            Anomaly found. Fix the script to include this exception!
+        }
+
+        {_ Output the dynamic description _}
+        {if topGasPercent <= 65:
+            This planet's clouds have a mixed chemical composition with no single compound contributing more than two thirds of their volume.
+        |else:
+            {OneOf("This planet's clouds are mainly composed of {gasName}", "This planet's clouds are rich in {gasName}", "This planet's clouds contain high levels of {gasName}")}.
+        }
+        
+        .
+    
+        {if state.report_atmo_comp > 1:
+            {OneOf("scans indicate", "readings show")}
+        
+            {if round(reportbody.atmospherecompositions[0].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[0].percent, 1) < 3:
+                    trace amounts of {reportbody.atmospherecompositions[0].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition}.
+                }
+            }           
+            {if round(reportbody.atmospherecompositions[1].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[1].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[1].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition}.
+                }
+            }
+            {if round(reportbody.atmospherecompositions[2].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[2].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[2].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition}.
+                }
+            }
+            {if round(reportbody.atmospherecompositions[3].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[3].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[3].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition}.
+                }
+            }
+        }
+        
+        {set temp to: {TempCalc(smartRound(reportbody.temperature))}}
+        {if find(temp, "-") >= 0: 
+            {set temp to cat(temp*-1, tempscale, " below zero")}
+        |elif temp >= 800:
+            {set temp to cat(Humanise(temp), tempscale)}
+        |else:
+            {set temp to cat(temp, tempscale)}
+        }
+        
+        {if state.report_temp > 1:
+            . The atmosphere has an average temperature of {temp}. 
+            
+            {if reportbody.temperature >= 500 && reportbody.temperature < 1000:
+                {OneOf("Yeowch!", "Hot enough to fry an egg.")}
+            }
+            {if reportbody.temperature >= 1000:
+                {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!")}
+            }
+        }
+        
+        {if state.report_gas_giant_class = 1:
+            {if find(reportbody.planettype, "Class I gas") >= 0:
+                This body qualifies as a Sudarsky class one gas giant, analogous to Jupiter and Saturn in the Sol system. Deeper scans show distinct cloud layers containing ammonia, ammonium hydrosulfide, and condensed carbon compounds.
+            |elif find(reportbody.planettype, "Class II gas") >= 0:
+                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing water ice crystals.
+            |elif find(reportbody.planettype, "Class III gas") >= 0:
+                This body qualifies as a Sudarsky {reportbody.planettype}, having no distinct cloud layers, and with most of the lower atmosphere composed of methane. These planets may have an appearance similar to Uranus or Neptune in the Sol system, but have an entirely different chemical composition.
+            |elif find(reportbody.planettype, "Class IV gas") >= 0:
+                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing carbon monoxide, sodium, and potassium. Lower in the atmosphere, trace amounts of silicates, iron, and alkali metals are present.
+            |elif find(reportbody.planettype, "Class V gas") >= 0:
+                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing sillicate and iron compounds, formed at the higher temperatures this planet is experiencing.
+            |elif find(reportbody.planettype, "ammonia‑based life") >= 0:
+                
+            |elif find(reportbody.planettype, "Water giant") >= 0:
+                
+            |elif find(reportbody.planettype, "water‑based life") >= 0:
+                
+            |elif find(reportbody.planettype, "Helium gas giant") >= 0:
+                
+            |elif find(reportbody.planettype, "Helium-rich") >= 0:
+                
+            |else:
+                Anomaly found. Fix the script to include this exception!
+            }
+        }
+        
+        {if state.report_orbit > 1:
+            This planet has an orbital period
+            
+            {if round(reportbody.orbitalperiod/365, 2) >= 0.9 && round(reportbody.orbitalperiod/365, 2) <= 1.1:
+                roughly equivalent to one Earth year.
+            |elif round(reportbody.orbitalperiod/365, 2) < 0.9:
+                of {smartRound(reportbody.orbitalperiod)} earth days.
+            |elif round(reportbody.orbitalperiod/365, 2) > 1.1:
+                of {smartRound(reportbody.orbitalperiod/365)} earth years.
+            }
+        }
+            
+    |elif reportbody.landable = true || (state.immersion > 0 && find(reportbody.planettype, "giant") < 0):
+    
+        {_ All other atmospheric bodies _}
+        
+        {OneOf("Albedo", "Reflectivity", "Ionization")} scan is complete.
+        
+        {if reportbody.pressure < 0.1:
+            {set pressdesc to OneOf("trace gas", "super thin")}
+        |elif reportbody.pressure < 0.25:
+            {set pressdesc to "very thin"}
+        |elif reportbody.pressure < 0.5:
+            {set pressdesc to "thin"}
+        |elif reportbody.pressure < 2:
+            {set pressdesc to OneOf("")}
+        |elif reportbody.pressure < 10:
+            {set pressdesc to "thick"}
+        |elif reportbody.pressure < 50:
+            {set pressdesc to OneOf("dense", "very thick")}
+        |elif reportbody.pressure < 100:
+            {set pressdesc to OneOf("very dense", "super thick")}
+        |elif reportbody.pressure >= 100:
+            {set pressdesc to OneOf("crushing", "super dense")}
+        }
+        
+        {_ Map custom scientific names for specific gases _}
+        {if find(topGas, "Methane") >= 0: 
+            {set gasName to OneOf("hydrogen carbide, commonly known as methane", "methane")}
+        |elif find(topGas, "Ammonia") >= 0: 
+            {set gasName to OneOf("hydrogen nitride, commonly known as ammonia", "ammonia")}
+        |elif find(topGas, "Car") >= 0: 
+            {set gasName to OneOf("carbon oxides, mainly carbon dioxide", "carbon dioxide", "C O 2")}
+        |elif find(topGas, "Nitrogen") >= 0: 
+            {set gasName to OneOf("nitrous oxides, mainly nitrogen", "nitrogen")}
+        |elif find(topGas, "Helium") >= 0 || find(topGas, "Argon") >= 0 || find(topGas, "Neon") >= 0: 
+            {set gasName to cat("noble gasses, with the highest concentration being ", topGas)}
+        |elif find(topGas, "Water") >= 0: 
+            {set gasName to OneOf("water vapor", "water")}
+        |elif find(topGas, "Silicate") >= 0: 
+            {set gasName to OneOf("silicate vapors", "silicates", "silicon dioxide vapor")}
+        |elif find(topGas, "Sulphur") >= 0: 
+            {set gasName to OneOf("sulfur oxides and sulfuric acids", "sulfur dioxide", "sulfuric compounds")}
+        |elif find(topGas, "Oxygen") >= 0: 
+            {set gasName to "oxygen"}
+        |else:
+            Anomaly found. Fix the script to include this exception!
+        }
+
+        {_ Output the dynamic description _}
+        {if topGasPercent <= 65:
+            The atmosphere has a mixed composition with no single compound contributing more than two thirds of it's volume.
+        |else:
+            {OneOf("The {pressdesc} atmosphere is composed of {gasName}", "The {pressdesc} atmosphere is rich in {gasName}", "The {pressdesc} atmosphere contains high levels of {gasName}")}.
+        }
+        
+        {if (state.report_atmo_comp > 0 && reportbody.landable = true) || state.report_atmo_comp > 1:
+            {OneOf("scans indicate", "readings show")}
+            
+            {if round(reportbody.atmospherecompositions[0].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[0].percent, 1) < 3:
+                    trace amounts of {reportbody.atmospherecompositions[0].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition}.
+                }
+            }           
+            {if round(reportbody.atmospherecompositions[1].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[1].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[1].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition}.
+                }
+            }
+            {if round(reportbody.atmospherecompositions[2].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[2].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[2].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition}.
+                }
+            }
+            {if round(reportbody.atmospherecompositions[3].percent, 1) > 0:
+                {if round(reportbody.atmospherecompositions[3].percent, 1) < 3:
+                    trace amounts {reportbody.atmospherecompositions[3].composition}.
+                |else:
+                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition}.
+                }
+            }
+        }
+        
+        {if (state.report_pressure > 0 && reportbody.landable = true) || state.report_pressure > 1:
+            It has surface pressure
+    
+            {if reportbody.pressure < 0.1 && reportbody.pressure >= 0.01:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, or less than one tenth of Earth's.
+            |elif reportbody.pressure >= 0.75 && reportbody.pressure < 1.25:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, similar to Earth's.
+            |elif reportbody.pressure >= 1.25 && reportbody.pressure < 10:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, or {smartRound(reportbody.pressure)} times Earth's.
+            |elif reportbody.pressure >= 10 && reportbody.pressure < 1000:
+                {smartRound(reportbody.pressure)} times Earth's.
+            |elif reportbody.pressure >= 1000:
+                {Humanise(smartRound(reportbody.pressure))} times Earth's.
+            |elif reportbody.pressure >= 0.1 && reportbody.pressure < 0.5:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, or less than half of Earth's.
+            |elif reportbody.pressure >= 0.5 && reportbody.pressure < 0.75:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals,
+            |elif round(reportbody.pressure*101.325, 2) = 0:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, despite the fact that this planet is also shown to have an atmosphere. All bodies with this specific appearance apparently  have bugged surface pressure values in game, meaning that I had to find a way to write an exception for this rare type of planet into my script. Thanks Frontier.
+            |elif reportbody.pressure < 0.01:
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, or less than one-one-hundredth of Earth's.
+            }
+        }
+        
+        {if (state.report_sky_color > 0 && reportbody.landable = true) || state.report_sky_color > 1:
+            {_ Grab the gas names and percent _}
+            {set primaryGas to reportbody.atmospherecompositions[0].name}
+            {set secondaryGas to reportbody.atmospherecompositions[1].name}            
+            {if secondaryGas && secondaryGas != "":
+                {set secondaryPercent to round(reportbody.atmospherecompositions[1].percent, 1)}
+            }
+            {set tertiaryGas to reportbody.atmospherecompositions[2].name}
+            {if tertiaryGas && tertiaryGas != "":
+                {set tertiaryPercent to round(reportbody.atmospherecompositions[2].percent, 1)}
+            }
+            
+            {_ Initialize empty arrays to hold the final combined colors _}
+            {set dayColors to []}
+            {set sunsetColors to []}
+            
+            {_ Map the Primary Gas _}
+            {if find(primaryGas, "Methane") >= 0:
+                {set dayColors to ["orange", "green"]}
+                {set sunsetColors to ["red", "green"]}
+            |elif find(primaryGas, "Nitrogen") >= 0:
+                {set dayColors to ["blue"]}
+                {set sunsetColors to ["blue", "yellow"]}
+            |elif find(primaryGas, "Argon") >= 0:
+                {set dayColors to ["orange", "green"]}
+                {set sunsetColors to ["red", "green"]}
+            |elif find(primaryGas, "Car") >= 0:
+                {set dayColors to ["blue", "yellow"]}
+                {set sunsetColors to ["yellow", "orange"]}
+            |elif find(primaryGas, "Neon") >= 0:
+                {set dayColors to ["navy blue", "black"]}
+                {set sunsetColors to ["navy blue", "black"]}
+            |elif find(primaryGas, "Ammonia") >= 0:
+                {set dayColors to ["red", "orange"]}
+                {set sunsetColors to ["green", "yellow"]}
+            |elif find(primaryGas, "Sulphur") >= 0:
+                {set dayColors to ["blue", "brown"]}
+                {set sunsetColors to ["navy blue", "yellow"]}
+            |elif find(primaryGas, "Water") >= 0:
+                {set dayColors to ["dark blue"]}
+                {set sunsetColors to ["dark blue", "black"]}
+            |elif find(primaryGas, "Helium") >= 0:
+                {set dayColors to ["dark blue", "black"]}
+                {set sunsetColors to ["dark blue", "yellow", "green"]}
+            |elif find(primaryGas, "Oxygen") >= 0:
+                {set dayColors to ["pink", "blue"]}
+                {set sunsetColors to ["pink", "blue", "yellow"]}
+            |elif find(primaryGas, "Silicate") >= 0:
+                {set dayColors to ["brown"]}
+                {set sunsetColors to ["pink", "black"]}
+            |else:
+                Anomaly found. Fix the script to include this exception!
+            }
+                
+            {_ Map the Secondary Gas _}
+            {set secondaryContributes to false}
+            {if secondaryGas && secondaryGas != "" && secondaryPercent >= 20:
+                {set secondaryContributes to true}
+                
+                {_ Temporarily hold the secondary colors _}
+                {set tempDayColors to []}
+                {set tempSunsetColors to []}
+                
+                {if find(secondaryGas, "Nitrogen") >= 0:
+                    {set tempDayColors to ["blue"]}
+                    {set tempSunsetColors to ["blue", "yellow"]}
+                |elif find(secondaryGas, "Methane") >= 0:
+                    {set tempDayColors to ["orange", "green"]}
+                    {set tempSunsetColors to ["red", "green"]}
+                |elif find(secondaryGas, "Argon") >= 0:
+                    {set tempDayColors to ["orange", "green"]}
+                    {set tempSunsetColors to ["red", "green"]}
+                |elif find(secondaryGas, "Car") >= 0:
+                    {set tempDayColors to ["blue", "yellow"]}
+                    {set tempSunsetColors to ["yellow", "orange"]}
+                |elif find(secondaryGas, "Neon") >= 0:
+                    {set tempDayColors to ["navy blue", "black"]}
+                    {set tempSunsetColors to ["navy blue", "black"]}
+                |elif find(secondaryGas, "Ammonia") >= 0:
+                    {set tempDayColors to ["red", "orange"]}
+                    {set tempSunsetColors to ["green", "yellow"]}
+                |elif find(secondaryGas, "Sulphur") >= 0:
+                    {set tempDayColors to ["blue", "brown"]}
+                    {set tempSunsetColors to ["navy blue", "yellow"]}
+                |elif find(secondaryGas, "Water") >= 0:
+                    {set tempDayColors to ["dark blue"]}
+                    {set tempSunsetColors to ["dark blue", "black"]}
+                |elif find(secondaryGas, "Helium") >= 0:
+                    {set tempDayColors to ["dark blue", "black"]}
+                    {set tempSunsetColors to ["dark blue", "yellow", "green"]}
+                |elif find(secondaryGas, "Oxygen") >= 0:
+                    {set tempDayColors to ["pink", "blue"]}
+                    {set tempSunsetColors to ["pink", "blue", "yellow"]}
+                |elif find(secondaryGas, "Silicate") >= 0:
+                    {set tempDayColors to ["brown"]}
+                    {set tempSunsetColors to ["pink", "black"]}
+                |else:
+                    Anomaly found. Fix the script to include this exception!
+                }
+                
+                {_ Safely merge secondary day colors (preventing duplicates) _}
+                {for color in tempDayColors:
+                    {if find(dayColors, color) = -1:
+                        {set dayColors to cat(dayColors, [color])}
+                    }
+                }
+                
+                {_ Safely merge secondary sunset colors (preventing duplicates) _}
+                {for color in tempSunsetColors:
+                    {if find(sunsetColors, color) = -1:
+                        {set sunsetColors to cat(sunsetColors, [color])}
+                    }
+                }
+            }
+                
+            {_ Map the Tertiary Gas _}
+            {set tertiaryContributes to false}
+            {if tertiaryGas && tertiaryGas != "" && tertiaryPercent >= 20:
+                {set tertiaryContributes to true}
+                
+                {_ Temporarily hold the tertiary colors _}
+                {set tempDayColors to []}
+                {set tempSunsetColors to []}
+                
+                {if find(tertiaryGas, "Nitrogen") >= 0:
+                    {set tempDayColors to ["blue"]}
+                    {set tempSunsetColors to ["blue", "yellow"]}
+                |elif find(tertiaryGas, "Methane") >= 0:
+                    {set tempDayColors to ["orange", "green"]}
+                    {set tempSunsetColors to ["red", "green"]}
+                |elif find(tertiaryGas, "Argon") >= 0:
+                    {set tempDayColors to ["orange", "green"]}
+                    {set tempSunsetColors to ["red", "green"]}
+                |elif find(tertiaryGas, "Car") >= 0:
+                    {set tempDayColors to ["blue", "yellow"]}
+                    {set tempSunsetColors to ["yellow", "orange"]}
+                |elif find(tertiaryGas, "Neon") >= 0:
+                    {set tempDayColors to ["navy blue", "black"]}
+                    {set tempSunsetColors to ["navy blue", "black"]}
+                |elif find(tertiaryGas, "Ammonia") >= 0:
+                    {set tempDayColors to ["red", "orange"]}
+                    {set tempSunsetColors to ["green", "yellow"]}
+                |elif find(tertiaryGas, "Sulphur") >= 0:
+                    {set tempDayColors to ["blue", "brown"]}
+                    {set tempSunsetColors to ["navy blue", "yellow"]}
+                |elif find(tertiaryGas, "Water") >= 0:
+                    {set tempDayColors to ["dark blue"]}
+                    {set tempSunsetColors to ["dark blue", "black"]}
+                |elif find(tertiaryGas, "Helium") >= 0:
+                    {set tempDayColors to ["dark blue", "black"]}
+                    {set tempSunsetColors to ["dark blue", "yellow", "green"]}
+                |elif find(tertiaryGas, "Oxygen") >= 0:
+                    {set tempDayColors to ["pink", "blue"]}
+                    {set tempSunsetColors to ["pink", "blue", "yellow"]}
+                |elif find(tertiaryGas, "Silicate") >= 0:
+                    {set tempDayColors to ["brown"]}
+                    {set tempSunsetColors to ["pink", "black"]}
+                |else:
+                    Anomaly found. Fix the script to include this exception!
+                }
+                        
+                {_ Safely merge tertiary day colors (preventing duplicates) _}
+                {for color in tempDayColors:
+                    {if find(dayColors, color) = -1:
+                        {set dayColors to cat(dayColors, [color])}
+                    }
+                }
+            
+                {_ Safely merge tertiary sunset colors (preventing duplicates) _}
+                {for color in tempSunsetColors:
+                    {if find(sunsetColors, color) = -1:
+                    {set sunsetColors to cat(sunsetColors, [color])}
+                    }
+                }
+            }
+            
+            {_ The master priority list: Primary/distinct colors first, shades last _}
+            {set priorityColors to ["blue", "red", "yellow", "green", "black", "dark blue", "pink", "brown", "orange", "navy blue"]}
+            
+            {_ Trim Day Colors _}
+            {if len(dayColors) > 3:
+                {set tempTrimmed to []}
+                {for pColor in priorityColors:
+                    {if len(tempTrimmed) < 3:
+                        {if find(dayColors, pColor) >= 0:
+                            {set tempTrimmed to cat(tempTrimmed, [pColor])}
+                        }
+                    }
+                }
+                {set dayColors to tempTrimmed}
+            }
+            
+            {_ Trim Sunset Colors _}
+            {if len(sunsetColors) > 3:
+                {set tempTrimmed to []}
+                {for pColor in priorityColors:
+                    {if len(tempTrimmed) < 3:
+                        {if find(sunsetColors, pColor) >= 0:
+                            {set tempTrimmed to cat(tempTrimmed, [pColor])}
+                        }
+                    }
+                }
+                {set sunsetColors to tempTrimmed}
+            }
+            
+            {if len(dayColors) > 0 && len(sunsetColors) > 0:
+                {if tertiaryContributes:
+                    {_ Three gases are present and over 20% _}
+                    This {reportbody.planettype} will appear from the surface as having some combination of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                |elif secondaryContributes:
+                    {_ Two gases are present and over 20% _}
+                    This {reportbody.planettype} will appear from the surface as having some combination of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                |elif secondaryGas && secondaryGas != "":
+                    {_ Secondary gas exists, but is under 20% _}
+                    This {reportbody.planettype} will appear from the surface as having {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                |else:
+                    {_ Only a primary gas exists _}
+                    This {reportbody.planettype} will appear from the surface as having {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                }
+            }
+        }
+    }
+}
+    
+{if (reportbody.landable = true && topGasPercent > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.immersion > 1) || (reportbody.landable = false && state.immersion > 0 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.immersion > 0 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
+        
+    {_ Surface conditions _}
+    
+    {if (reportbody.landable = true && topGasPercent > 0 && state.report_temp > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp > 2) || (reportbody.landable = false && state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
+    
+        Preliminary surface scans show
+        
+        {set temp to: {TempCalc(smartRound(reportbody.temperature))}}
+        {if find(temp, "-") >= 0: 
+            {set temp to cat(temp*-1, tempscale, " below zero")}
+        |elif temp >= 800:
+            {set temp to cat(Humanise(temp), tempscale)}
+        |else:
+            {set temp to cat(temp, tempscale)}
+        }
+        
+        {if reportbody.solarday < 0:
+            {set absSolar to reportbody.solarday*-1}
+        |else:
+            {set absSolar to reportbody.solarday}
+        }
+        
+        an average surface temperature of {temp}.
+        
+        {if reportbody.temperature > 500 && reportbody.temperature < 1000:
+            {OneOf("Yeowch!", "Hot enough to fry an egg.")}
+        }
+        {if reportbody.temperature > 1000:
+            {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!")}
+        }
+    }
+    
+    {if reportbody.landable = true:
+        {Occasionally(4, "Need to stretch your legs commander?")}
+        {if state.report_temp = 0 || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp < 3) || (reportbody.landable = false && state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
+            Preliminary surface scans show that
+        }
+        {reportbody.bodytype} {Spacialise(reportbody.shortname)} is landable with survivable surface conditions and surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
+    | elif reportbody.landable = false && find(reportbody.planettype, "giant") < 0:
+        {reportbody.bodytype} {Spacialise(reportbody.shortname)} has surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
+    }
+        
+    {set isMoon to false}
+    
+    {_ First check: EDDI's built-in bodytype _}
+    {if reportbody.bodytype = "Moon":
+        {set isMoon to true}
+    }
+    
+    {_ Second check: The parents array _}
+    {if reportbody.parents && len(reportbody.parents) > 0:
+        {for parent in reportbody.parents:
+            {if has(parent, "Planet"):
+                {set isMoon to true}
+            }
+        }
+    }
+        
+    {_ 1. Set our default assumption _}
+    {set isBinaryPair to false}
+
+    {_ 1. Verify the body orbits a barycenter _}
+    {if len(reportbody.parents) > 0 && reportbody.parents[0].name = "Null":
+    
+    {_ Grab the unique ID of the barycenter this planet orbits _}
+    {set baryID to reportbody.parents[0].id}
+    {set isStellarBarycenter to false}
+    
+    {_ 2. Ask the system if any STARS share this exact barycenter ID _}
+    {for sibling in system.bodies:
+        {if len(sibling.parents) > 0 && sibling.parents[0].id = baryID:
+            
+            {_ If a sibling sharing this center is a star, flag it _}
+            {if sibling.stellarclass:
+                {set isStellarBarycenter to true}
+            }
+        }
+    }
+    
+    {_ 3. If no stars are present, the planets are orbiting each other! _}
+    {if !isStellarBarycenter:
+        
+        {_ Optional: Check if it's a binary moon pair by seeing if the Null orbits a Planet _}
+        {if len(reportbody.parents) > 1 && reportbody.parents[1].name = "Planet":
+            {_ It is a binary moon pair _}
+            {set isBinaryPair to true}
+        |else:
+            {_ It is a true binary planet pair _}
+            {set isBinaryPair to true}
+        }
+    }
+}
+
+    {if (reportbody.tidallylocked = false && isMoon = false && !isBinaryPair) && ((reportbody.landable = true && topGasPercent > 0 && state.report_orbit > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_orbit > 2) || (reportbody.landable = false && state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0)):
+    
+        One day on this body is
+        
+        {if round(absSolar*24, 1) >= 23 && round(absSolar*24, 1) <= 25:
+            roughly equivalent to one Earth day     
+        |elif (round(absSolar*24, 1) > 25 && round(absSolar*24, 1) < 48) || (round(absSolar*24, 1) < 23):
+            {smartRound(absSolar*24)} hours long
+        |elif round(absSolar*24, 1) >= 48 && round(absSolar, 1) < 365:
+            equivalent to {smartRound(absSolar)} earth days
+        |elif round(absSolar, 1) >= 365:
+            equivalent to {smartRound(absSolar/365)} earth years
+        }
+    
+        {if reportbody.landable = true:
+            {if round(((absSolar/2)*24), 1) >= 48 && round(((absSolar/2)*24), 1) < 365:
+                with an average of {smartRound((absSolar/2))} earth days worth of daylight from sunrise to sunset at the equator,
+            }
+            {if round(((absSolar/2)*24), 1) < 48:
+                with an average of {smartRound(((absSolar/2)*24))} hours of daylight from sunrise to sunset at the equator,
+            }
+            {if round(((absSolar/2)), 1) >= 365:
+                with an average of {smartRound(((absSolar/2)/365))} earth years worth of daylight from sunrise to sunset at the equator,
+            }
+        }
+        
+        and one orbital period is
+        
+        {if round(reportbody.orbitalperiod/365, 2) >= 0.9 && round(reportbody.orbitalperiod/365, 2) <= 1.1:
+            roughly equivalent to one Earth year.
+        |elif round(reportbody.orbitalperiod/365, 2) < 0.9:
+            equivalent to {smartRound(reportbody.orbitalperiod)} earth days.
+        |elif round(reportbody.orbitalperiod/365, 2) > 1.1:
+            equivalent to {smartRound(reportbody.orbitalperiod/365)} earth years.
+        }
+         
+        {if reportbody.landable = true:
+            {Occasionally(4, "Time to watch a sunrise perhaps?")}
+             
+            A full sunrise or sunset on this {reportbody.bodytype} at the equator would last approximately
+         
+            {if round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) >= 1:
+                {smartRound(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)))} hours.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) < 1:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))*60))} minutes.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) >= 24:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))/24))} earth days.
+            }
+        }
+         
+    |elif reportbody.tidallylocked = true:
+        This body has no sunrises or sunsets - it is tidally locked and has no day night cycle.
+    }
+}
+
+{_ Begin the Koppen Classification _}
+
+{ if topGasPercent > 0 && find(reportbody.planettype, "giant") < 0 && state.report_climate = 1:
+    {if (reportbody.temperature-273.15) >= -100 && (reportbody.temperature-273.15) < -20:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification E F, polar, and will have yearly temperatures similar to Antarctica or Northern Greenland.
+    }
+    {if (reportbody.temperature-273.15) >= -20 && (reportbody.temperature-273.15) < 5:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification E T, Tundra, and will have yearly temperatures similar to the Prince Edward Islands, Nuuk in Greenland, or Svalbard in Norway.
+    }
+    {if (reportbody.temperature-273.15) >= 5 && (reportbody.temperature-273.15) < 10:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F C, Subpolar, and will have yearly temperatures similar to Iceland, the Auckland Islands, or Tierra del Fuego in Argentina.
+    }
+    {if (reportbody.temperature-273.15) >= 10 && (reportbody.temperature-273.15) < 15 && find(reportbody.planettype, "Icy") < 0:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F B, Temperate, and will have yearly temperatures similar to the Netherlands, Spain, or Vancouver in British Columbia.
+    }
+    {if (reportbody.temperature-273.15) >= 15 && (reportbody.temperature-273.15) < 20 && find(reportbody.planettype, "Icy") < 0:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F B, Subtropical, and will have yearly temperatures similar to Asunción in Paraguay, Brisbane in Australia, or Atlanta in the United States.
+    }
+    {if (reportbody.temperature-273.15) >= 20 && (reportbody.temperature-273.15) < 28 && find(reportbody.planettype, "Icy") < 0:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification A F, tropical, and will have yearly temperatures similar to Florida...Hawaii, or Pago Pago in American Samoa.
+    }
+    {if (reportbody.temperature-273.15) >= 28 && (reportbody.temperature-273.15) < 38 && find(reportbody.planettype, "Icy") < 0:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification A S, savannah, and will have yearly temperatures similar to Mombasa in Kenya, Lagos in Nigeria, or Kigali in Rwanda.
+    }
+    {if (reportbody.temperature-273.15) >= 38 && (reportbody.temperature-273.15) < 60 && find(reportbody.planettype, "Icy") < 0:
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification B W H, hot desert, and will have yearly temperatures similar to Egypt, Death Valley in California, or Riyadh in Saudi Arabia.
+    }
+}            

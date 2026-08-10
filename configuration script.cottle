@@ -1,0 +1,73 @@
+{_ CUSTOMIZATION _}
+{_ ---------------------------------------------------------------------------------------------- _}
+
+{SetState('edcopilot', 1)}  
+{_ Set to 0 if you are not using EdCopilot's speech output / integration with EDDI _}
+{_ Set to 1 if you are using EdCopilot's speech output / integration with EDDI _}
+
+{SetState('reportatmotempscale', 2)}  
+{_ Set to 0 if you want to hear about temperatures in Kelvin _}
+{_ Set to 1 if you want to hear about temperatures in Celsius _}
+{_ Set to 2 if you want to hear about temperatures in Fahrenheit _}
+
+{SetState('immersion', 1)}
+{_ Set to 0 if you only want to hear extended info for landable bodies with atmospheres.
+Set to 1 if you want to hear extended info for all bodies with atmospheres.
+Set to 2 if want to hear extended info for every body. _}
+
+{SetState('reportmatconc', 0)}
+{_ Set to 0 if you only want to hear about great material concentrations _}
+{_ Set to 1 if you want to hear about good and great material concentrations _}
+{_ Set to 2 if you want to hear about all material concentrations _}
+
+{SetState('reportmatpercent', 1)}
+{_ Set to 0 if you do not want to hear about material percentages _}
+{_ Set to 1 if you only want to hear about great material percentages _}
+{_ Set to 2 if you want to hear about good and great material percentages _}
+{_ Set to 3 if you want to hear about all material percentages _}
+                            
+{SetState('report_temp', 1)}
+{_ Set to 0 if you don't want to hear temperatures of planets and stars _}
+{_ Set to 1 if you want to hear temperatures only for stars and landable planets with atmospheres _}
+{_ Set to 2 if you want to hear temperatures only for stars and planets with atmospheres (including gas giants) _}
+{_ Set to 3 if you want to hear temperatures for all planets and stars _}
+
+{SetState('report_gas_giant_class', 1)}
+{_ Set to 0 if you don't want to hear descriptions of gas giant classes _}
+
+{SetState('report_orbit', 1)}
+{_ Set to 0 if you don't want to hear about day / night cycles or orbital periods _}
+{_ Set to 1 if you want to hear orbit info only for stars and landable planets with atmospheres _}
+{_ Set to 2 if you want to hear orbit info only for stars and planets with atmospheres (including gas giants) _}
+{_ Set to 3 if you want to hear orbit info for all planets and stars _}
+
+{SetState('report_atmo_comp', 1)}
+{_ Set to 0 if you don't want to hear about the percentage composition of atmospheres _}
+{_ Set to 1 if you want to only hear atmosphere composition percentages for landable planets with atmospheres _}
+{_ Set to 2 if you want to hear atmosphere composition percentages for all planets with atmospheres (including gas giants) _}
+
+{SetState('report_pressure', 1)}
+{_ Set to 0 if you don't want to hear about the surface pressure of atmospheric planets _}
+{_ Set to 1 if you want to hear surface pressure only for landable planets with atmospheres _}
+{_ Set to 2 if you want to hear surface pressure for all planets with atmospheres (excluding gas giants) _}
+
+{SetState('report_sky_color', 1)}
+{_ Set to 0 if you don't want to hear about sky colors on atmospheric planets _}
+{_ Set to 1 if you want to hear about sky colors only for landable planets with atmospheres _}
+{_ Set to 2 if you want to hear about sky colors for all planets with atmospheres (excluding gas giants) _}
+
+{SetState('report_climate', 1)}
+{_ Set to 0 if you don't want to hear about the climate classifications of atmospheric planets _}
+
+{_ MAIN SCRIPT _}
+{_ ---------------------------------------------------------------------------------------------- _}
+
+Welcome back {F("Honorific")}. Extra Science configuration options loaded.
+
+{SetState('reportmats', 2)}
+{SetState('eddi_context_last_subject', 'load_game')}
+{SetState('eddi_context_system_name', system.systemname)}
+{SetState('eddi_context_system_address', system.systemAddress)}
+{SetState('eddi_context_body_name', body.name)}
+{SetState('eddi_context_station_name', station.name)}
+{SetState('eddi_context_lastdocked', station.name)}

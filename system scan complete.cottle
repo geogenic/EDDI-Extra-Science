@@ -1,0 +1,146 @@
+{if !system.name || system.name = "":
+    I'm not sure which system you are asking about.
+|else:
+    
+    {if state.edcopilot > 0:
+        {F("[EXTRA SCIENCE] Notable Bodies")}
+        {F("[EXTRA SCIENCE] Body Detail Report")}
+    }
+    
+    {_ Set up empty arrays to hold our anomaly reports _}
+    {set shepherdMoons to []}
+    {set closeOrbits to []}
+    {set finalSpeech to []}
+    
+    {_ Loop through every fully-scanned body in the LIVE system memory _}
+    {for reportbody in system.bodies:
+    
+        {set isShepherd to false}
+        {set parentPlanetID to -1}
+        
+        {_ Locate the Parent Planet's ID using a dictionary key-value loop _}
+        {for parentDict in reportbody.parents:
+            {for pType, pID in parentDict:
+                {if pType = "Planet":
+                    {set parentPlanetID to pID}
+                }
+            }
+        }
+        
+        {_ If a parent planet exists, hunt it down in the live database _}
+        {if parentPlanetID >= 0:
+            {for body in system.bodies:
+                {if body.bodyId = parentPlanetID:
+                    {_ Check if the parent planet actually has rings _}
+                    {if len(body.rings) > 0:
+                        
+                        {_ Compare the moon's orbit to the ring boundaries _}
+                        {for ring in body.rings:
+                            {if reportbody.semimajoraxis && reportbody.semimajoraxis > 0:
+                                {if (reportbody.semimajoraxis*299792.458) <= (ring.outerradius * 1.05):
+                                    {set isShepherd to true}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        {set isCloseOrbit to false}
+        {set directParentID to -1}
+        {set directParentName to ""}
+        
+        {_ Safely extract the direct parent using dictionary key-value extraction _}
+        {for parentDict in reportbody.parents:
+            {if directParentID = -1:
+                {for pType, pID in parentDict:
+                    {set directParentName to pType}
+                    {set directParentID to pID}
+                }
+            }
+        }
+
+        {_ Verify the body actually has a parent AND valid orbital data _}
+        {if directParentID >= 0 && reportbody.semimajoraxis && reportbody.semimajoraxis > 0:
+            
+            {_ If it is a binary pair orbiting a barycenter _}
+            {if directParentName = "Null":
+                
+                {_ Hunt for the sibling sharing this exact barycenter _}
+                {for sibling in system.bodies:
+                    
+                    {set siblingDirectParentID to -1}
+                    {for sibParentDict in sibling.parents:
+                        {if siblingDirectParentID = -1:
+                            {for sibType, sibID in sibParentDict:
+                                {set siblingDirectParentID to sibID}
+                            }
+                        }
+                    }
+                    
+                    {if sibling.bodyId != reportbody.bodyId && siblingDirectParentID = directParentID && sibling.semimajoraxis && sibling.semimajoraxis > 0:
+                    
+                        {_ Dynamically handle barycenters _}
+                        {set siblingRadius to sibling.radius}
+                        {if !siblingRadius || siblingRadius = 0:
+                            {set siblingRadius to reportbody.radius}
+                        }
+                        
+                        {_ Calculate the physical distance between the two bodies _}
+                        {set binaryDistance to (reportbody.semimajoraxis*299792.458) + (sibling.semimajoraxis*299792.458)}
+                        {set combinedRadii to (reportbody.radius + siblingRadius)}
+                        {if binaryDistance < (combinedRadii * 6):
+                            {set isCloseOrbit to true}
+                        }
+                    }
+                }
+                
+            {_ If it orbits a solid star or planet _}
+            |else:
+                {for parentBody in system.bodies:
+                    {if parentBody.bodyId = directParentID: 
+                        {if (reportbody.semimajoraxis*299792.458) < (parentBody.radius * 5):
+                            {set isCloseOrbit to true}
+                        }
+                    }
+                }
+            }
+        }
+        
+        {_ Flag for a close orbit _}
+        {if isCloseOrbit:
+            {set closeOrbits to cat(closeOrbits, [Spacialise(reportbody.shortname)])}
+        }
+        
+        {_ Flag for a shepherd moon _}
+        {if isShepherd:
+            {set shepherdMoons to cat(shepherdMoons, [Spacialise(reportbody.shortname)])}
+        }
+    }
+    
+    {if len(shepherdMoons) > 0:
+        {if len(shepherdMoons) = 1:
+            {set speech to cat(shepherdMoons[0], " is a shepherd moon. This body's orbit passes through the ring system of its parent planet.")}
+        |else:
+            {set speech to cat("Bodies ", List(shepherdMoons), " are shepherd moons. These bodies' orbits pass through the ring systems of their parent planets.")}
+        }
+        {set finalSpeech to cat(finalSpeech, [speech])}
+    }
+    
+    {if len(closeOrbits) > 0:
+        {if len(closeOrbits) = 1:
+            {set speech to cat(closeOrbits[0], " orbits remarkably close to another body in the system.")}
+        |else:
+            {set speech to cat("Bodies ", List(closeOrbits), " are orbiting remarkably close to other bodies in the system.")}
+        }
+        {set finalSpeech to cat(finalSpeech, [speech])}
+    }
+    
+    {_ Read the final grouped report _}
+    {if len(finalSpeech) > 0:
+        System scan complete. {join(finalSpeech, " ")}
+    |else:
+        System scan complete.
+    }
+}

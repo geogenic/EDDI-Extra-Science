@@ -1,0 +1,418 @@
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+
+{SetState("first_footfall", false)}
+
+{_ Begin processing _}
+
+{if !reportbody.name || reportbody.name = "":
+    
+    {_ If it's still not possible to get the body name...  _}
+    Which body are you
+    {OneOf("asking about","referring to")}?
+    
+|else:
+
+    {reportbody.bodytype} {Spacialise(reportbody.shortname)} scanned.
+    
+    {_ Function to round numbers dynamically _}
+    {set abs(val) to:
+        {if val < 0:
+            {return val * -1}
+        |else:
+            {return val}
+        }
+    }
+    {set smartRound(val) to:
+        {set absVal to abs(val)}
+        {if absVal < 0.01:
+            {return round(val, 3)}
+        |elif absVal < 0.1:
+            {return round(val, 2)}
+        |elif absVal < 10:
+            {return round(val, 1)}
+        |else:
+            {return round(val, 0)}
+        }
+    }
+    
+    {_ Convert atm to Earth units _}
+    {set formatPressure(rawAtm) to:
+        {set mathAtm to smartRound(rawAtm)}
+        {set atmWord to "atmospheres"}
+        {if mathAtm = 1:
+            {set atmWord to "atmosphere"}
+        }
+        {set compStr to ""}
+    
+        {if mathAtm >= 1000:
+            {set compStr to cat(Humanise(mathAtm), " times Earth's")}
+        |elif mathAtm > 1:
+            {set compStr to cat(mathAtm, " times Earth's")}
+        |elif mathAtm = 1:
+            {set compStr to "exactly equal to Earth's"}
+        |elif mathAtm >= 0.75:
+            {set compStr to "about three-quarters of Earth's"}
+        |elif mathAtm >= 0.5:
+            {set compStr to "about half of Earth's"}
+        |elif mathAtm >= 0.25:
+            {set compStr to "about a quarter of Earth's"}
+        |elif mathAtm >= 0.1:
+            {set compStr to "about a tenth of Earth's"}
+        |else:
+            {set compStr to "a tiny fraction of Earth's"}
+        }
+        {if mathAtm <= 0:
+            {return "negligible atmospheric pressure, representing a tiny fraction of Earth's"}
+        |else:
+            {return cat(mathAtm, " ", atmWord, ", or ", compStr)}
+        }
+    }
+    
+    {_ Dynamically scale time into readable units _}
+    {set formatTime(rawValue, baseUnit) to:
+        {set mathVal to rawValue}
+        
+        {_ Catch retrograde spins and flip them to positive for the math _}
+        {if mathVal < 0:
+            {set mathVal to (mathVal * -1)}
+        }
+        
+        {set timeStr to ""}
+        
+        {if baseUnit = "years":
+            {if mathVal >= 1000:
+                {set timeStr to cat(Humanise(smartRound(mathVal)), " Earth years")}
+            |elif mathVal >= 1:
+                {set timeStr to cat(smartRound(mathVal), " Earth years")}
+            |else:
+                {_ Convert fractions of a year into days _}
+                {set timeStr to cat(smartRound(mathVal * 365), " Earth days")}
+            }
+        |elif baseUnit = "days":
+            {if mathVal >= 1:
+                {set timeStr to cat(smartRound(mathVal), " Earth days")}
+            |elif (mathVal * 24) >= 1:
+                {_ Convert fractions of a day into hours _}
+                {set timeStr to cat(smartRound(mathVal * 24), " hours")}
+            |else:
+                {_ Convert tiny fractions into minutes _}
+                {set timeStr to cat(smartRound(mathVal * 1440), " minutes")}
+            }
+        }
+        {return timeStr}
+    }
+    
+    {set findAnomaly(scannedValue, mean, stdDev, statName, highAdj, lowAdj, valString) to:
+        {set zScore to (scannedValue - mean) / stdDev}
+        
+        {if zScore > 3.0:
+            {return [
+                "percentile": cat("99 point ninth Percentile for ", statName), 
+                "desc": cat("an extraordinarily ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore > 2.0:
+            {return [
+                "percentile": cat("98th Percentile for ", statName), 
+                "desc": cat("a very ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore > 1.0:
+            {return [
+                "percentile": cat("84th Percentile for ", statName), 
+                "desc": cat("an unusually ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -3.0 && lowAdj != "":
+            {return [
+                "percentile": cat("bottom one tenth of one percent for ", statName), 
+                "desc": cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -2.0 && lowAdj != "":
+            {return [
+                "percentile": cat("2nd Percentile for ", statName), 
+                "desc": cat("a very ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -1.0 && lowAdj != "":
+            {return [
+                "percentile": cat("16th Percentile for ", statName), 
+                "desc": cat("an unusually ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        }
+        
+        {_ Return a completely empty dictionary if the planet is average _}
+        {return []}
+    }
+
+    {_ Initialize the custom data dictionaries _}
+    {set planetAnomalies to []}
+    {set planetDescriptions to []}
+    
+    {_ Define individual planet profiles _}
+    {set ammoniaWorld to ["meanMass": 6.2799, "stdMass": 19.8256, "meanGrav": 1.2952, "stdGrav": 1.8376, "meanTilt": -0.0044, "stdTilt": 0.895, "meanEcc": 0.0382, "stdEcc": 0.0821, "meanInc": -0.0299, "stdInc": 17.0794, "meanOrbPer": 1967.3645, "stdOrbPer": 4799.2827, "meanRad": 8408.8509, "stdRad": 9898.005, "meanRotPer": 25.5202, "stdRotPer": 64.212, "meanPress": 1580.6746, "stdPress": 14923.1568, "meanTemp": 205.9566, "stdTemp": 209.6219]}
+    
+    {set ammoniaWorldMoon to ["meanMass": 0.4171, "stdMass": 0.9305, "meanGrav": 0.5155, "stdGrav": 0.5353, "meanTilt": -0.0098, "stdTilt": 0.5041, "meanEcc": 0.0018, "stdEcc": 0.0115, "meanInc": 0.2064, "stdInc": 46.6234, "meanOrbPer": 176.6825, "stdOrbPer": 249.9666, "meanRad": 5055.8395, "stdRad": 5425.5883, "meanRotPer": 44.1738, "stdRotPer": 70.5579, "meanPress": 32.184, "stdPress": 187.8536, "meanTemp": 210.0205, "stdTemp": 212.5352]}
+    
+    {set class1GasGiantMoon to ["meanMass": 58.2848, "stdMass": 111.7867, "meanGrav": 0.7864, "stdGrav": 1.0013, "meanTilt": -0.0037, "stdTilt": 0.6637, "meanEcc": 0.0079, "stdEcc": 0.0238, "meanInc": -0.2176, "stdInc": 36.8533, "meanOrbPer": 225.0037, "stdOrbPer": 320.9527, "meanRad": 38442.7324, "stdRad": 43678.7622, "meanRotPer": 78.8256, "stdRotPer": 137.8978, "meanTemp": 78.8198, "stdTemp": 87.2723]}
+    
+    {set class1GasGiant to ["meanMass": 115.8705, "stdMass": 179.9272, "meanGrav": 1.3946, "stdGrav": 1.6487, "meanTilt": -0.004, "stdTilt": 0.9595, "meanEcc": 0.0577, "stdEcc": 0.1346, "meanInc": -0.0809, "stdInc": 32.4585, "meanOrbPer": 8528.4827, "stdOrbPer": 175116.5171, "meanRad": 48188.4493, "stdRad": 51531.9972, "meanRotPer": 27.7785, "stdRotPer": 1754.2052, "meanTemp": 85.4838, "stdTemp": 91.8753]}
+    
+    {set class2GasGiant to ["meanMass": 437.1542, "stdMass": 529.9349, "meanGrav": 3.3419, "stdGrav": 3.8282, "meanTilt": -0.0026, "stdTilt": 1.1301, "meanEcc": 0.0607, "stdEcc": 0.1288, "meanInc": -0.0911, "stdInc": 29.0535, "meanOrbPer": 3748.6491, "stdOrbPer": 34216.4187, "meanRad": 65302.79, "stdRad": 67598.2959, "meanRotPer": 30.7101, "stdRotPer": 250.2526, "meanTemp": 191.4202, "stdTemp": 193.4979]}
+    
+    {set class2GasGiantMoon to ["meanMass": 231.3385, "stdMass": 352.8477, "meanGrav": 1.8459, "stdGrav": 2.4991, "meanTilt": -0.0072, "stdTilt": 0.5098, "meanEcc": 0.0038, "stdEcc": 0.0191, "meanInc": -0.5723, "stdInc": 47.3439, "meanOrbPer": 179.7717, "stdOrbPer": 236.3807, "meanRad": 56192.9261, "stdRad": 59601.2218, "meanRotPer": 90.1582, "stdRotPer": 127.0114, "meanTemp": 195.3373, "stdTemp": 197.2328]}
+    
+    {set class3GasGiant to ["meanMass": 1260.007, "stdMass": 1460.602, "meanGrav": 9.5382, "stdGrav": 11.262, "meanTilt": -0.0029, "stdTilt": 1.3469, "meanEcc": 0.0576, "stdEcc": 0.1093, "meanInc": -0.05, "stdInc": 23.1879, "meanOrbPer": 1835.3788, "stdOrbPer": 37865.5656, "meanRad": 70683.5782, "stdRad": 71781.6179, "meanRotPer": 16.7108, "stdRotPer": 131.4666, "meanTemp": 436.8231, "stdTemp": 461.1805]}
+    
+    {set class3GasGiantMoon to ["meanMass": 841.5025, "stdMass": 1114.716, "meanGrav": 6.1729, "stdGrav": 8.3075, "meanTilt": -0.0062, "stdTilt": 0.5106, "meanEcc": 0.0026, "stdEcc": 0.0161, "meanInc": -0.0561, "stdInc": 49.8113, "meanOrbPer": 174.8406, "stdOrbPer": 216.6323, "meanRad": 68662.5741, "stdRad": 70043.109, "meanRotPer": 45.9702, "stdRotPer": 77.7176, "meanTemp": 480.3896, "stdTemp": 504.3025]}
+    
+    {set class4GasGiant to ["meanMass": 2473.578, "stdMass": 2734.1953, "meanGrav": 22.0518, "stdGrav": 24.8398, "meanTilt": -0.0031, "stdTilt": 1.4804, "meanEcc": 0.0613, "stdEcc": 0.1099, "meanInc": 0.0211, "stdInc": 26.5141, "meanOrbPer": 1368.7197, "stdOrbPer": 53569.6479, "meanRad": 67671.6315, "stdRad": 68082.0791, "meanRotPer": 14.5466, "stdRotPer": 7880.1319, "meanTemp": 974.8826, "stdTemp": 984.7873]}
+    
+    {set class4GasGiantMoon to ["meanMass": 1853.365, "stdMass": 2109.281, "meanGrav": 14.8052, "stdGrav": 17.4762, "meanTilt": -0.0003, "stdTilt": 0.3425, "meanEcc": 0.0003, "stdEcc": 0.0053, "meanInc": -0.237, "stdInc": 51.6791, "meanOrbPer": 149.6828, "stdOrbPer": 182.2013, "meanRad": 71688.5742, "stdRad": 72017.2994, "meanRotPer": 19.7415, "stdRotPer": 41.0575, "meanTemp": 1040.4279, "stdTemp": 1054.0048]}
+    
+    {set class5GasGiant to ["meanMass": 1571.8738, "stdMass": 2012.7049, "meanGrav": 13.5798, "stdGrav": 17.8753, "meanTilt": -0.0085, "stdTilt": 1.1255, "meanEcc": 0.0953, "stdEcc": 0.168, "meanInc": 0.0211, "stdInc": 26.5141, "meanOrbPer": 1368.7197, "stdOrbPer": 53569.6479, "meanRad": 67671.6315, "stdRad": 68082.0791, "meanRotPer": 14.5466, "stdRotPer": 7880.1319, "meanTemp": 974.8826, "stdTemp": 984.7873]}
+    
+    {set class5GasGiantMoon to ["meanMass": 2308.4007, "stdMass": 2485.0093, "meanGrav": 19.0039, "stdGrav": 21.0119, "meanTilt": -0.0057, "stdTilt": 0.3317, "meanEcc": 0.0002, "stdEcc": 0.0031, "meanInc": -0.2165, "stdInc": 51.7776, "meanOrbPer": 113.2923, "stdOrbPer": 139.7092, "meanRad": 71168.3655, "stdRad": 71323.46, "meanRotPer": 8.8437, "stdRotPer": 19.6306, "meanTemp": 1806.7491, "stdTemp": 1834.8007]}
+    
+    {set ammoniaLifeGasGiant to ["meanMass": 190.2558, "stdMass": 258.9913, "meanGrav": 1.8321, "stdGrav": 2.1337, "meanTilt": -0.0035, "stdTilt": 1.0232, "meanEcc": 0.0515, "stdEcc": 0.1128, "meanInc": -0.055, "stdInc": 25.5947, "meanOrbPer": 4378.0676, "stdOrbPer": 20239.4189, "meanRad": 55916.2081, "stdRad": 58780.5947, "meanRotPer": 33.6383, "stdRotPer": 227.0906, "meanTemp": 123.1404, "stdTemp": 123.971]}
+    
+    {set ammoniaLifeGasGiantMoon to ["meanMass": 72.3282, "stdMass": 144.5461, "meanGrav": 0.8669, "stdGrav": 1.1786, "meanTilt": -0.0105, "stdTilt": 0.5016, "meanEcc": 0.0045, "stdEcc": 0.0176, "meanInc": -0.2114, "stdInc": 41.5119, "meanOrbPer": 226.5766, "stdOrbPer": 316.3392, "meanRad": 39931.5704, "stdRad": 44847.1215, "meanRotPer": 84.3883, "stdRotPer": 139.9468, "meanTemp": 122.3227, "stdTemp": 123.1205]}
+    
+    {set waterLifeGasGiant to ["meanMass": 436.5993, "stdMass": 529.5753, "meanGrav": 3.3403, "stdGrav": 3.8278, "meanTilt": -0.0038, "stdTilt": 1.131, "meanEcc": 0.0608, "stdEcc": 0.1287, "meanInc": -0.0794, "stdInc": 29.1074, "meanOrbPer": 3726.9786, "stdOrbPer": 20797.5588, "meanRad": 65246.2044, "stdRad": 67552.4298, "meanRotPer": 33.6383, "stdRotPer": 227.0906, "meanTemp": 191.4404, "stdTemp": 193.533]}
+    
+    {set waterLifeGasGiantMoon to ["meanMass": 240.3468, "stdMass": 354.8281, "meanGrav": 1.9044, "stdGrav": 2.5194, "meanTilt": -0.0036, "stdTilt": 0.4908, "meanEcc": 0.0032, "stdEcc": 0.0168, "meanInc": -0.5618, "stdInc": 47.8771, "meanOrbPer": 192.2732, "stdOrbPer": 250.3337, "meanRad": 57525.3956, "stdRad": 60731.6515, "meanRotPer": 89.3558, "stdRotPer": 126.7267, "meanTemp": 195.5653, "stdTemp": 197.574]}
+    
+    {set heliumGasGiant to ["meanMass": 1994.57, "stdMass": 2551.7185, "meanGrav": 97.6613, "stdGrav": 162.9335, "meanTilt": -0.134, "stdTilt": 0.3069, "meanEcc": 0.0204, "stdEcc": 0.0485, "meanInc": -0.2744, "stdInc": 5, "meanOrbPer": 3619.2371, "stdOrbPer": 5448.9139, "meanRad": 28893.6359, "stdRad": 29927.0512, "meanRotPer": 11.6048, "stdRotPer": 23.038, "meanTemp": 724.5317, "stdTemp": 895.152]}
+    
+    {set heliumGasGiantMoon to ["meanMass": 1280.3706, "stdMass": 1542.7959, "meanGrav": 10.1766, "stdGrav": 12.3838, "meanTilt": 0.1318, "stdTilt": 0.3286, "meanEcc": 0, "stdEcc": 0, "meanInc": 18.8866, "stdInc": 57.6393, "meanOrbPer": 125.8333, "stdOrbPer": 141.7716, "meanRad": 71183.765, "stdRad": 71294.8918, "meanRotPer": 34.3574, "stdRotPer": 54.817, "meanTemp": 634.3137, "stdTemp": 662.842]}
+        
+    {set heliumRichGasGiant to ["meanMass": 1073.0771, "stdMass": 1562.2543, "meanGrav": 9.9668, "stdGrav": 15.0316, "meanTilt": -0.0031, "stdTilt": 1.3967, "meanEcc": 0.0538, "stdEcc": 0.0935, "meanInc": -0.0447, "stdInc": 17.6016, "meanOrbPer": 2529.9569, "stdOrbPer": 16440.1522, "meanRad": 60682.4736, "stdRad": 62769.5914, "meanRotPer": 19.0403, "stdRotPer": 177.127, "meanTemp": 428.5031, "stdTemp": 555.321]}
+    
+    {set heliumRichGasGiantMoon to ["meanMass": 480.5887, "stdMass": 732.8413, "meanGrav": 3.6206, "stdGrav": 5.6093, "meanTilt": -0.0033, "stdTilt": 0.3447, "meanEcc": 0.0004, "stdEcc": 0.0052, "meanInc": -0.1179, "stdInc": 51.2562, "meanOrbPer": 234.9243, "stdOrbPer": 308.3231, "meanRad": 64906.2755, "stdRad": 67102.6584, "meanRotPer": 66.2095, "stdRotPer": 109.0796, "meanTemp": 362.407, "stdTemp": 504.2437]}
+    
+    {set earthLikeWorld to ["meanMass": 0.8005, "stdMass": 0.9907, "meanGrav": 0.955, "stdGrav": 0.9923, "meanTilt": -0.0051, "stdTilt": 0.935, "meanEcc": 0.0237, "stdEcc": 0.0582, "meanInc": -0.0423, "stdInc": 11.4364, "meanOrbPer": 846.0562, "stdOrbPer": 2036.9016, "meanRad": 5401.6437, "stdRad": 5518.5969, "meanRotPer": 28.108, "stdRotPer": 62.8037, "meanPress": 1.1517, "stdPress": 1.5095, "meanTemp": 285.2065, "stdTemp": 285.7456]}
+    
+    {set earthLikeWorldMoon to ["meanMass": 0.4069, "stdMass": 0.4796, "meanGrav": 0.6596, "stdGrav": 0.6741, "meanTilt": -0.0056, "stdTilt": 0.4734, "meanEcc": 0.0014, "stdEcc": 0.0103, "meanInc": -0.6278, "stdInc": 47.3059, "meanOrbPer": 102.1246, "stdOrbPer": 194.4529, "meanRad": 4881.0366, "stdRad": 4942.7294, "meanRotPer": 40.7001, "stdRotPer": 55.3716, "meanPress": 0.7995, "stdPress": 0.951, "meanTemp": 281.1657, "stdTemp": 281.6189]}
+    
+    {set highMetalContentWorld to ["meanMass": 1.0475, "stdMass": 2.9096, "meanGrav": 0.8064, "stdGrav": 1.0675, "meanTilt": -0.0043, "stdTilt": 0.8648, "meanEcc": 0.0271, "stdEcc": 0.0759, "meanInc": -0.031, "stdInc": 17.5778, "meanOrbPer": 1332.3433, "stdOrbPer": 32409.3893, "meanRad": 4334.9637, "stdRad": 5128.2822, "meanRotPer": 20.6322, "stdRotPer": 61.1736, "meanPress": 1.1517, "stdPress": 1.5095, "meanTemp": 625.9059, "stdTemp": 1035.1896]}
+    
+    {set highMetalContentWorldMoon to ["meanMass": 0.1408, "stdMass": 0.4348, "meanGrav": 0.376, "stdGrav": 0.4611, "meanTilt": -0.005, "stdTilt": 0.8864, "meanEcc": 0.0124, "stdEcc": 0.0359, "meanInc": 0.0025, "stdInc": 2.7461, "meanOrbPer": 5.0572, "stdOrbPer": 8.7837, "meanRad": 2425.82, "stdRad": 2817.9575, "meanRotPer": 5.1381, "stdRotPer": 8.6649, "meanPress": 795.8505, "stdPress": 85228.672, "meanTemp": 297.9797, "stdTemp": 406.2542]}
+    
+    {set icyBody to ["meanMass": 1.7551, "stdMass": 6.1605, "meanGrav": 0.6271, "stdGrav": 0.8448, "meanTilt": -0.0044, "stdTilt": 0.916, "meanEcc": 0.0237, "stdEcc": 0.0582, "meanInc": -0.031, "stdInc": 17.5778, "meanOrbPer": 1332.3433, "stdOrbPer": 32409.3893, "meanRad": 4334.9637, "stdRad": 5128.2822, "meanRotPer": 20.6322, "stdRotPer": 61.1736, "meanPress": 14831.3194, "stdPress": 211027.6474, "meanTemp": 104.8767, "stdTemp": 195.9486]}
+    
+    {set icyBodyMoon to ["meanMass": 0.0181, "stdMass": 0.1776, "meanGrav": 0.0854, "stdGrav": 0.1112, "meanTilt": -0.0046, "stdTilt": 0.8075, "meanEcc": 0.0118, "stdEcc": 0.0369, "meanInc": -0.0569, "stdInc": 22.701, "meanOrbPer": 77.4856, "stdOrbPer": 276.4441, "meanRad": 1399.5289, "stdRad": 1746.7363, "meanRotPer": 21.8933, "stdRotPer": 43.6979, "meanPress": 47.8463, "stdPress": 4796.7091, "meanTemp": 84.202, "stdTemp": 105.1213]}
+    
+    {set metalRichBody to ["meanMass": 0.5361, "stdMass": 1.4286, "meanGrav": 1.0148, "stdGrav": 1.2492, "meanTilt": -0.0045, "stdTilt": 0.7431, "meanEcc": 0.0168, "stdEcc": 0.0567, "meanInc": -0.0213, "stdInc": 16.4608, "meanOrbPer": 39.795, "stdOrbPer": 32335.8862, "meanRad": 3024.364, "stdRad": 3539.1499, "meanRotPer": 7.1426, "stdRotPer": 19.6428, "meanPress": 138059.0238, "stdPress": 18039041.3784, "meanTemp": 1494.4781, "stdTemp": 1800.576]}
+    
+    {set metalRichBodyMoon to ["meanMass": 0.0036, "stdMass": 0.0322, "meanGrav": 0.1382, "stdGrav": 0.1762, "meanTilt": -0.0049, "stdTilt": 0.6041, "meanEcc": 0.0049, "stdEcc": 0.0225, "meanInc": -0.109, "stdInc": 38.8956, "meanOrbPer": 8.8889, "stdOrbPer": 29.7075, "meanRad": 511.1272, "stdRad": 634.9353, "meanRotPer": 5.3985, "stdRotPer": 13.4091, "meanPress": 23.2187, "stdPress": 9696.0802, "meanTemp": 1125.9144, "stdTemp": 1133.5205]}
+    
+    {set rockyIceWorld to ["meanMass": 0.6842, "stdMass": 1.4364, "meanGrav": 0.5775, "stdGrav": 0.6741, "meanTilt": -0.0043, "stdTilt": 0.9358, "meanEcc": 0.0213, "stdEcc": 0.0521, "meanInc": -0.0131, "stdInc": 9.3559, "meanOrbPer": 1244.6686, "stdOrbPer": 19155.6827, "meanRad": 5047.3398, "stdRad": 5622.709, "meanRotPer": 24.9787, "stdRotPer": 62.4842, "meanPress": 12565.3419, "stdPress": 181428.3321, "meanTemp": 208.8046, "stdTemp": 327.7442]}
+    
+    {set rockyIceWorldMoon to ["meanMass": 0.0146, "stdMass": 0.0402, "meanGrav": 0.136, "stdGrav": 0.1569, "meanTilt": -0.0049, "stdTilt": 0.6473, "meanEcc": 0.0075, "stdEcc": 0.0295, "meanInc": -0.1493, "stdInc": 37.1121, "meanOrbPer": 40.7858, "stdOrbPer": 92.6314, "meanRad": 1454.5252, "stdRad": 1640.1814, "meanRotPer": 19.6361, "stdRotPer": 31.6009, "meanPress": 84.849, "stdPress": 1682.1475, "meanTemp": 156.7053, "stdTemp": 217.3055]}
+    
+    {set rockyBody to ["meanMass": 0.6842, "stdMass": 1.4364, "meanGrav": 0.5775, "stdGrav": 0.6741, "meanTilt": -0.0012, "stdTilt": 0.6725, "meanEcc": 0.0299, "stdEcc": 0.073, "meanInc": -0.0131, "stdInc": 9.3559, "meanOrbPer": 1244.6686, "stdOrbPer": 19155.6827, "meanRad": 5047.3398, "stdRad": 5622.709, "meanRotPer": 24.9787, "stdRotPer": 62.4842, "meanPress": 12565.3419, "stdPress": 181428.3321, "meanTemp": 208.8046, "stdTemp": 327.7442]}
+    
+    {set rockyBodyMoon to ["meanMass": 0.0121, "stdMass": 0.0636, "meanGrav": 0.1361, "stdGrav": 0.1651, "meanTilt": -0.0045, "stdTilt": 0.7855, "meanEcc": 0.0119, "stdEcc": 0.0366, "meanInc": -0.053, "stdInc": 22.9972, "meanOrbPer": 22.3625, "stdOrbPer": 64.2106, "meanRad": 1121.9343, "stdRad": 1318.8036, "meanRotPer": 11.7241, "stdRotPer": 34.2495, "meanPress": 2.0704, "stdPress": 841.9282, "meanTemp": 156.7053, "stdTemp": 217.3055]}
+        
+    {set waterGiant to ["meanMass": 65.6381, "stdMass": 88.9537, "meanGrav": 5.2977, "stdGrav": 6.3643, "meanTilt": -0.002, "stdTilt": 1.2065, "meanEcc": 0.0422, "stdEcc": 0.0702, "meanInc": -0.0122, "stdInc": 17.52, "meanOrbPer": 6682.7014, "stdOrbPer": 8473.0567, "meanRad": 21304.0201, "stdRad": 21430.9222, "meanRotPer": 2.141, "stdRotPer": 25.6108, "meanTemp": 177.3021, "stdTemp": 183.4611]}
+    
+    {set waterGiantMoon to ["meanMass": 32.3335, "stdMass": 33.847, "meanGrav": 3.0105, "stdGrav": 3.0581, "meanTilt": -0.0178, "stdTilt": 0.3242, "meanEcc": 0, "stdEcc": 0, "meanInc": -3.689, "stdInc": 49.8002, "meanOrbPer": 1012.402, "stdOrbPer": 1058.2208, "meanRad": 20671.7083, "stdRad": 20704.9192, "meanRotPer": 1.3031, "stdRotPer": 1.6669, "meanTemp": 163.0412, "stdTemp": 163.2902]}
+    
+    {set waterWorld to ["meanMass": 1.5501, "stdMass": 4.2285, "meanGrav": 1.0469, "stdGrav": 1.2012, "meanTilt": -0.0047, "stdTilt": 0.9393, "meanEcc": 0.029, "stdEcc": 0.0781, "meanInc": -0.0337, "stdInc": 17.3069, "meanOrbPer": 1061.164, "stdOrbPer": 3662.2637, "meanRad": 6127.881, "stdRad": 6583.8553, "meanRotPer": 28.5078, "stdRotPer": 90.9659, "meanPress": 6482865.1028, "stdPress": 44764861.862, "meanTemp": 318.3108, "stdTemp": 328.1222]}
+    
+    {set waterWorldMoon to ["meanMass": 0.3514, "stdMass": 0.5495, "meanGrav": 0.5327, "stdGrav": 0.5633, "meanTilt": -0.0074, "stdTilt": 0.4866, "meanEcc": 0.0119, "stdEcc": 0.0366, "meanInc": -0.6084, "stdInc": 47.3019, "meanOrbPer": 95.5885, "stdOrbPer": 165.1347, "meanRad": 4869.4239, "stdRad": 5053.1573, "meanRotPer": 44.1077, "stdRotPer": 63.0166, "meanPress": 29.079, "stdPress": 114.1393, "meanTemp": 283.3591, "stdTemp": 288.7738]}
+    
+    {set isMoon to false}
+    
+    {_ First check: EDDI's built-in bodytype _}
+    {if reportbody.bodytype = "Moon":
+        {set isMoon to true}
+    }
+    
+    {_ Second check: The parents array _}
+    {if reportbody.parents && len(reportbody.parents) > 0:
+        {for parent in reportbody.parents:
+            {if has(parent, "Planet"):
+                {set isMoon to true}
+            }
+        }
+    }
+    
+    {_ Build the dynamic lookup key _}
+    {set lookupKey to reportbody.planettype}
+    
+    {if isMoon = true:
+        {set lookupKey to cat(reportbody.planettype, " Moon")}
+    }
+    
+    {_ Package all individual profiles into the Master Dictionary _}
+    {set astroData to [
+        "Ammonia world": ammoniaWorld,
+        "Ammonia world Moon": ammoniaWorldMoon,
+        "Class I gas giant": class1GasGiant,
+        "Class I gas giant Moon": class1GasGiantMoon,
+        "Class II gas giant": class2GasGiant,
+        "Class II gas giant Moon": class2GasGiantMoon,
+        "Class III gas giant": class3GasGiant,
+        "Class III gas giant Moon": class3GasGiantMoon,
+        "Class IV gas giant": class4GasGiant,
+        "Class IV gas giant Moon": class4GasGiantMoon,
+        "Class V gas giant": class5GasGiant,
+        "Class V gas giant Moon": class5GasGiantMoon,
+        "Gas giant with ammonia‑based life": ammoniaLifeGasGiant,
+        "Gas giant with ammonia‑based life Moon": ammoniaLifeGasGiantMoon,
+        "Gas giant with water‑based life": waterLifeGasGiant,
+        "Gas giant with water‑based life Moon": waterLifeGasGiantMoon,
+        "Helium gas giant": heliumGasGiant,
+        "Helium gas giant Moon": heliumGasGiantMoon,
+        "Helium-rich gas giant": heliumRichGasGiant,
+        "Helium-rich gas giant Moon": heliumRichGasGiantMoon,
+        "Earth-like world": earthLikeWorld,
+        "Earth-like world Moon": earthLikeWorldMoon,
+        "High metal content world": highMetalContentWorld,
+        "High metal content world Moon": highMetalContentWorldMoon,
+        "Icy body": icyBody,
+        "Icy body Moon": icyBodyMoon,
+        "Metal-rich body": metalRichBody,
+        "Metal-rich body Moon": metalRichBodyMoon,
+        "Rocky Ice world": rockyIceWorld,
+        "Rocky Ice world Moon": rockyIceWorldMoon,
+        "Rocky body": rockyBody,
+        "Rocky body Moon": rockyBodyMoon,
+        "Water giant": waterGiant,
+        "Water giant Moon": waterGiantMoon,
+        "Water world": waterWorld,
+        "Water world Moon": waterWorldMoon
+    ]}
+    
+    {_ Calculate Z-Scores _}
+    {if has(astroData, lookupKey):
+        {_ Save the current dictionary to a shorter variable to save typing _}
+        {set current to astroData[lookupKey]}
+        {if reportbody.earthmass >= 1000:
+            {set massString to cat(Humanise(smartRound(reportbody.earthmass)), " Earth masses")}
+        |else:
+            {set massString to cat(smartRound(reportbody.earthmass), " Earth masses")}
+        }
+        {set anomaly to findAnomaly(reportbody.earthmass, current["meanMass"], current["stdMass"], "mass", "high", "low", massString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {set gravString to cat(smartRound(reportbody.gravity), " g")}
+        {set anomaly to findAnomaly(reportbody.gravity, current["meanGrav"], current["stdGrav"], "gravity", "high", "low", gravString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {set tiltString to cat(smartRound(abs(reportbody.tilt*(180/3.14))), " degrees")}
+        {set anomaly to findAnomaly(abs(reportbody.tilt), abs(current["meanTilt"]), current["stdTilt"], "axial tilt", "steep", "shallow", tiltString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {set eccString to smartRound(reportbody.eccentricity)}
+        {set anomaly to findAnomaly(reportbody.eccentricity, current["meanEcc"], current["stdEcc"], "eccentricity", "high", "", eccString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {set incString to cat(smartRound(abs(reportbody.inclination)), " degrees")}
+        {set anomaly to findAnomaly(abs(reportbody.inclination), abs(current["meanInc"]), current["stdInc"], "orbit inclination", "steep", "shallow", incString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {set orbPerString to formatTime(reportbody.orbitalperiod, "years")}
+        {set anomaly to findAnomaly(reportbody.orbitalperiod, current["meanOrbPer"], current["stdOrbPer"], "orbital period length", "long", "short", orbPerString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {if reportbody.radius >= 1000:
+            {set radString to cat(Humanise(smartRound(reportbody.radius)), " kilometers")}
+        |else:
+            {set radString to cat(smartRound(reportbody.radius), " kilometers")}
+        }
+        {set anomaly to findAnomaly(reportbody.radius, current["meanRad"], current["stdRad"], "radius", "large", "small", radString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+        
+        {if reportbody.tidallylocked = false:
+            {set rotPerString to formatTime(reportbody.rotationalperiod, "days")}
+            {set anomaly to findAnomaly(reportbody.rotationalperiod, current["meanRotPer"], current["stdRotPer"], "rotational period length", "long", "short", rotPerString)}
+            {if len(anomaly) > 0: 
+                {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            }
+        }
+        
+        {if has(reportbody, "pressure") && reportbody.pressure > 0 && find(reportbody.planettype, "giant") < 0:
+            {set pressString to formatPressure(reportbody.pressure)}
+            {set anomaly to findAnomaly(reportbody.pressure, current["meanPress"], current["stdPress"], "surface pressure", "high", "low", pressString)}
+            {if len(anomaly) > 0: 
+                {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            }
+        }
+        
+        {if reportbody.temperature >= 1000:
+            {set tempString to cat(Humanise(smartRound(reportbody.temperature)), " degrees kelvin")}
+        |else:
+            {set tempString to cat(smartRound(reportbody.temperature), " degrees kelvin")}
+        }
+        {set anomaly to findAnomaly(reportbody.temperature, current["meanTemp"], current["stdTemp"], "surface temperature", "high", "low", tempString)}
+        {if len(anomaly) > 0: 
+            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        }
+    }
+        
+    {_ Speech Output _}
+    {if len(planetAnomalies) > 0:
+    
+        {if find(reportbody.planettype, "Class I gas") >= 0:
+            This class one gas giant is in the {List(planetAnomalies)} compared to other planets of its type. It has {List(planetDescriptions)}.
+        |else:
+            This {reportbody.planettype} is in the {List(planetAnomalies)} compared to other
+            
+            {if isMoon = true:
+                moons
+            |else:
+                planets
+            }
+            
+            of its type. It has {List(planetDescriptions)}.
+        }
+    }
+    
+    {if find(reportbody.planettype, "Ammonia world") >= 0:
+        This body is an uncommon type of planet classified as an ammonia world. These planets are similar to other terrestrial atmospheric planets, but are unique in that they have ammonia-based life and  large amounts of liquid ammonia at the surface. Ammonia worlds like this one possess an active weather system similar to Earth's, but with destructive storms producing liquid ammonia and methane rain.
+    |elif find(reportbody.planettype, "Earth-like world") >= 0:
+        This body is a rare type of planet classified as an earth-like world. These planets are extremely similar to Earth in the sol system, with diverse carbon-based life and abundant liquid water at the surface.
+    |elif find(reportbody.planettype, "Water world") >= 0:
+        This body is a rare type of planet classified as a water world. These planets have abundant liquid water at the surface, but no landmasses or solid ground. Water worlds like this one possess an active weather system similar to Earth's, including massive destructive cyclones that traverse the planet's oceans.
+    |elif find(reportbody.planettype, "ammonia‑based life") >= 0:
+        This is fascinating commander. I am detecting signs of life within an ammonia cloud layer deep in the atmosphere of this planet. It would appear that this layer also contains an excess of oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton floating within it. These organisms appear to behave similarly to algae on Earth, and are feeding off the intense radiation hitting this planet.
+    |elif find(reportbody.planettype, "water‑based life") >= 0:
+        This is fascinating commander. I am detecting signs of life within a cloud layer deep in the atmosphere of this planet. It would appear that this layer also contains an excess of oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton floating within it. These organisms appear to behave similarly to algae on Earth, and are feeding off the intense radiation hitting this planet.
+    |elif find(reportbody.planettype, "helium-rich") >= 0:
+        This planet has a greatly inflated percentage of helium compared to the hydrogen in its atmosphere. Helium giants like this one form in hotter areas of star systems, which contributes to the rapid loss of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
+    |elif find(reportbody.planettype, "helium") >= 0:
+        This planet has lost most of the hydrogen in its atmosphere due to its unusually low mass compared to other gas giants. Helium giants like this one form in hotter areas of star systems, which contributes to the rapid loss of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
+    |elif find(reportbody.planettype, "water giant") >= 0:
+        This body is an uncommon type of planet classified as a water giant, and likely formed when a large icy body warmed up enough for its surface ice to evaporate into water vapor. This would have triggered a runaway greenhouse effect leading to a very thick atmosphere made up of ice crystals and water vapor.
+    }
+    
+    {F("[EXTRA SCIENCE] Body Volcanism Report")}
+    {F("[EXTRA SCIENCE] Body Materials Report")}
+    
+}

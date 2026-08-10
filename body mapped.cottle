@@ -1,0 +1,70 @@
+{_ Context _}
+{SetState('eddi_context_last_subject', 'body')}
+{SetState('eddi_context_last_action', 'scan')}
+{SetState('eddi_context_body_system', system.name)}
+{SetState('eddi_context_body_name', event.name)}
+{SetState('eddi_context_last_scan_estimated_value', event.estimatedvalue)}
+
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+
+{_ Process the event _}
+{Pause(3000)}
+
+{OneOf("Mapping", "Surface Map")}
+{OneOf("is", "is now")}
+{OneOf("complete", "finished")}.
+
+{if event.probesused <= event.efficiencytarget:
+    Efficiency bonus {OneOf("awarded", "granted")}.
+}
+
+{if find(reportbody.reserves, "Pristine") >= 0:
+    This pristine
+|elif find(reportbody.reserves, "Major") >= 0:
+    This rich
+}
+
+{set ringname to []}
+{set ringcomposition to []}
+{for Ring in reportbody.rings:
+    {if find(ringcomposition, Ring.composition) < 0:
+        {set ringcomposition to cat(ringcomposition, [Ring.composition])}
+    }
+}
+
+{if len(ringcomposition) > 0:
+    {List(ringcomposition)}
+}
+
+{if find(ringname[0], "Belt") >= 0: 
+    {set ring to "belt"}
+|else:
+    {set ring to "ring"}
+}.
+
+{if reportbody.temperature > 700 && reportbody.landable = true:
+    Take caution on the surface
+    {if reportbody.gravity > 2.69 && reportbody.landable = true:
+        and when landing
+    }
+    . This {reportbody.planettype} has surface temperatures
+    {if reportbody.gravity > 2.69 && reportbody.landable = true:
+        and gravity
+    }
+    that exceed the limits of your exploration suit, and will be acutely hazardous to your health.
+    {if reportbody.gravity > 2.69 && reportbody.landable = true:
+        The high gravity will also make landing here a challenge. Be sure to descend slowly once you are out of glide.
+    }
+}
+
+{if reportbody.gravity > 2.69 && reportbody.landable = true && reportbody.temperature < 700:
+    Take caution on the surface and when landing. This {reportbody.planettype} has surface gravity that exceeds the limits of your exploration suit, and will make landing here a challenge. Be sure to descend slowly once you are out of glide.
+}
+
+{Pause(2000)}
+           
+{SetState("first_footfall", false)}

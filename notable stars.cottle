@@ -1,0 +1,389 @@
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_star_star, state.eddi_context_star_system)}
+{if !reportbody: {set reportbody to BodyDetails(state.eddi_context_star_star)}}
+{if !reportbody && event: {set reportbody to event.star}}
+
+{SetState("first_footfall", false)}
+
+{_ Begin processing _}
+
+{if !reportbody.name || reportbody.name = "":
+    Which star are you {OneOf("asking about", "referencing")}?
+|else:
+    {_ Function to round numbers dynamically _}
+    {set abs(val) to:
+        {if val < 0:
+            {return val * -1}
+        |else:
+            {return val}
+        }
+    }
+    
+    {set smartRound(val) to:
+        {set absVal to abs(val)}
+        {if absVal < 0.01:
+            {return round(val, 3)}
+        |elif absVal < 0.1:
+            {return round(val, 2)}
+        |elif absVal < 10:
+            {return round(val, 1)}
+        |else:
+            {return round(val, 0)}
+        }
+    }
+    
+    {_ Dynamically scale time into readable units _}
+    {set formatTime(rawValue, baseUnit) to:
+        {set mathVal to rawValue}
+        
+        {_ Catch retrograde spins and flip them to positive for the math _}
+        {if mathVal < 0:
+            {set mathVal to (mathVal * -1)}
+        }
+        
+        {set timeStr to ""}
+        
+        {if baseUnit = "years":
+            {if mathVal >= 1:
+                {if mathVal >=1000:
+                    {set timeStr to cat(Humanise(smartRound(mathVal)), " Earth years")}
+                |else:
+                    {set timeStr to cat(smartRound(mathVal), " Earth years")}
+                }
+            |else:
+                {_ Convert fractions of a year into days _}
+                {set timeStr to cat(smartRound(mathVal * 365), " Earth days")}
+            }
+        |elif baseUnit = "days":
+            {if mathVal >= 1:
+                {set timeStr to cat(smartRound(mathVal), " Earth days")}
+            |elif (mathVal * 24) >= 1:
+                {_ Convert fractions of a day into hours _}
+                {set timeStr to cat(smartRound(mathVal * 24), " hours")}
+            |else:
+                {_ Convert tiny fractions into minutes _}
+                {set timeStr to cat(smartRound(mathVal * 1440), " minutes")}
+            }
+        }
+        {return timeStr}
+    }
+
+    {_ Custom Function to translate Luminosity Classes into phonetic speech _}
+    {set speakLuminosity(rawClass) to:
+        {set lumMap to [
+            "0": "0", "Ia0": "1 A 0", "Ia": "1 A", "Iab": "1 A B", "Ib": "1 B", "I": "1",
+            "IIa": "2 A", "IIab": "2 A B", "IIb": "2 B", "II": "2",
+            "IIIa": "3 A", "IIIab": "3 A B", "IIIb": "3 B", "III": "3",
+            "IVa": "4 A", "IVab": "4 A B", "IVb": "4 B", "IV": "4",
+            "Va": "5 A", "Vab": "5 A B", "Vb": "5 B", "Vz": "5 Z", "V": "5",
+            "VI": "6", "VII": "7"
+        ]}
+        
+        {if has(lumMap, rawClass):
+            {return lumMap[rawClass]}
+        |else:
+            {_ Failsafe just in case a strange string slips through _}
+            Anomaly found. Fix the script to include this exception!
+            {return rawClass}
+        }
+    }
+    
+    {_ Custom Function to Calculate Z-Scores _}
+    {set findAnomaly(scannedValue, mean, stdDev, statName, highAdj, lowAdj, valString) to:
+        {set zScore to (scannedValue - mean) / stdDev}
+        
+        {if zScore > 3.0:
+            {return [
+                cat("99 point ninth Percentile for ", statName), 
+                cat("an extraordinarily ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore > 2.0:
+            {return [
+                cat("98th Percentile for ", statName), 
+                cat("a very ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore > 1.0:
+            {return [
+                cat("84th Percentile for ", statName), 
+                cat("an unusually ", highAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -3.0 && lowAdj != "":
+            {return [
+                cat("bottom one tenth of one percent for ", statName), 
+                cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -2.0 && lowAdj != "":
+            {return [
+                cat("2nd Percentile for ", statName), 
+                cat("a very ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        |elif zScore < -1.0 && lowAdj != "":
+            {return [
+                cat("16th Percentile for ", statName), 
+                cat("an unusually ", lowAdj, " ", statName, " of ", valString)
+            ]}
+        }
+        
+        {_ Return a completely empty array if the planet is average _}
+        {return []}
+    }
+    
+    {_ Define individual planet profiles _}
+    {set ABlueWhiteSuperGiant to ["meanMag": -6.3632, "stdMag": 6.979, "meanAge": 276.6211, "stdAge": 383.5253, "meanTilt": 0, "stdTilt": 0.0027, "meanEcc": 0.1555, "stdEcc": 0.1961, "meanInc": 0.218, "stdInc": 45.3386, "meanOrbPer": 335090.7142, "stdOrbPer": 816482.876, "meanRotPer": 38.0569, "stdRotPer": 62.2784, "meanSolMass": 14.1404, "stdSolMass": 25.6286, "meanSolRad": 102.5079, "stdSolRad": 166.8194, "meanTemp": 9999.47, "stdTemp": 10993.9944]}
+    
+    {set A to ["meanMag": 2.6988, "stdMag": 2.7287, "meanAge": 1469.1929, "stdAge": 1693.2802, "meanTilt": 0, "stdTilt": 0.0078, "meanEcc": 0.1512, "stdEcc": 0.1931, "meanInc": -0.0102, "stdInc": 44.9895, "meanOrbPer": 663212.6978, "stdOrbPer": 1545529.7555, "meanRotPer": 1.1266, "stdRotPer": 1.5281, "meanSolMass": 1.6572, "stdSolMass": 1.7047, "meanSolRad": 1.3836, "stdSolRad": 2.66, "meanTemp": 8090.9088, "stdTemp": 8105.3394]}
+    
+    {set BBlueWhiteSuperGiant to ["meanMag": -11.4264, "stdMag": 11.9747, "meanAge": 46.1837, "stdAge": 150.5756, "meanTilt": 0, "stdTilt": 0.0032, "meanEcc": 0.1552, "stdEcc": 0.1962, "meanInc": -0.7719, "stdInc": 44.7999, "meanOrbPer": 140346.599, "stdOrbPer": 386557.9602, "meanRotPer": 114.3334, "stdRotPer": 129.3345, "meanSolMass": 49.7008, "stdSolMass": 56.7736, "meanSolRad": 307.991, "stdSolRad": 346.0677, "meanTemp": 18350.2526, "stdTemp": 19681.4024]}
+    
+    {set B to ["meanMag": -1.2493, "stdMag": 2.3128, "meanAge": 171.2351, "stdAge": 248.2802, "meanTilt": 0, "stdTilt": 0.0214, "meanEcc": 0.1484, "stdEcc": 0.1908, "meanInc": -0.1223, "stdInc": 45.0393, "meanOrbPer": 349895.4936, "stdOrbPer": 897363.46, "meanRotPer": 1.7969, "stdRotPer": 10.6328, "meanSolMass": 5.2049, "stdSolMass": 7.4921, "meanSolRad": 4.8428, "stdSolRad": 28.4959, "meanTemp": 15118.9995, "stdTemp": 15782.0714]}
+    
+    {set H to ["meanAge": 7343.753, "stdAge": 8558.1264, "meanTilt": 0, "stdTilt": 0.0008, "meanEcc": 0.1486, "stdEcc": 0.191, "meanInc": 0.0066, "stdInc": 45.0029, "meanOrbPer": 340710.0713, "stdOrbPer": 885867.141, "meanSolMass": 9.1112, "stdSolMass": 13.7337, "meanSolRad": 0, "stdSolRad": 0.0001, "meanTemp": 6983.6, "stdTemp": 7401.8963]}
+    
+    {set C to ["meanMag": 0.3018, "stdMag": 0.5251, "meanAge": 10524.1626, "stdAge": 10828.9008, "meanTilt": 0.0001, "stdTilt": 0.0265, "meanEcc": 0.1535, "stdEcc": 0.1949, "meanInc": 0.0951, "stdInc": 44.818, "meanOrbPer": 851594.334, "stdOrbPer": 1969039.956, "meanRotPer": 116.1311, "stdRotPer": 119.0088, "meanSolMass": 1.0579, "stdSolMass": 1.0664, "meanSolRad": 30.721, "stdSolRad": 30.91, "meanTemp": 2969.9942, "stdTemp": 2979.362]}
+    
+    {set FWhiteSuperGiant to ["meanMag": -4.0964, "stdMag": 4.1691, "meanAge": 602.695, "stdAge": 1069.9578, "meanTilt": -0.0003, "stdTilt": 0.0282, "meanEcc": 0.1527, "stdEcc": 0.1936, "meanInc": -0.2116, "stdInc": 45.1499, "meanOrbPer": 482772.298, "stdOrbPer": 1090455.4602, "meanRotPer": 20.2679, "stdRotPer": 41.5462, "meanSolMass": 3.9078, "stdSolMass": 3.9667, "meanSolRad": 45.4149, "stdSolRad": 46.4407, "meanTemp": 6794.4189, "stdTemp": 6814.0159]}
+    
+    {set F_Star to ["meanMag": 3.8321, "stdMag": 3.8598, "meanAge": 2063.6485, "stdAge": 2592.8536, "meanTilt": 0, "stdTilt": 0.0128, "meanEcc": 0.1511, "stdEcc": 0.193, "meanInc": 0.0163, "stdInc": 45.0093, "meanOrbPer": 745415.5865, "stdOrbPer": 1741855.3195, "meanRotPer": 3.199, "stdRotPer": 3.5209, "meanSolMass": 1.302, "stdSolMass": 1.3147, "meanSolRad": 1.1789, "stdSolRad": 1.2132, "meanTemp": 6730.1064, "stdTemp": 6744.1058]}
+    
+    {set GWhiteYellowSuperGiant to ["meanMag": -3.1004, "stdMag": 3.1688, "meanAge": 1266.3923, "stdAge": 2094.3595, "meanTilt": 0, "stdTilt": 0.0266, "meanEcc": 0.1534, "stdEcc": 0.1959, "meanInc": 0.1498, "stdInc": 45.6255, "meanOrbPer": 542723.7533, "stdOrbPer": 1260594.7392, "meanRotPer": 22.5777, "stdRotPer": 51.1069, "meanSolMass": 2.8211, "stdSolMass": 2.8755, "meanSolRad": 42.5564, "stdSolRad": 44.7672, "meanTemp": 5573.0969, "stdTemp": 5583.2969]}
+    
+    {set G to ["meanMag": 5.1137, "stdMag": 5.1262, "meanAge": 4459.0286, "stdAge": 5868.1376, "meanTilt": 0, "stdTilt": 0.0034, "meanEcc": 0.15, "stdEcc": 0.1922, "meanInc": -0.0065, "stdInc": 44.9809, "meanOrbPer": 823038.9388, "stdOrbPer": 1979257.661, "meanRotPer": 3.8338, "stdRotPer": 4.1019, "meanSolMass": 0.932, "stdSolMass": 0.9388, "meanSolRad": 0.9611, "stdSolRad": 1.015, "meanTemp": 5547.0827, "stdTemp": 5551.851]}
+    
+    {set AEBE to ["meanMag": 9.5454, "stdMag": 9.6335, "meanAge": 1.9209, "stdAge": 2.1846, "meanTilt": 0.0001, "stdTilt": 0.0507, "meanEcc": 0.1464, "stdEcc": 0.1892, "meanInc": 0.0401, "stdInc": 45.0048, "meanOrbPer": 253051.7828, "stdOrbPer": 664036.341, "meanRotPer": 0.0797, "stdRotPer": 0.1089, "meanSolMass": 12.8691, "stdSolMass": 22.7787, "meanSolRad": 0.2126, "stdSolRad": 0.2658, "meanTemp": 4649.7704, "stdTemp": 4707.6354]}
+    
+    {set KYellowOrangeGiant to ["meanMag": -0.8497, "stdMag": 1.4371, "meanAge": 4511.1436, "stdAge": 5288.98, "meanTilt": 0, "stdTilt": 0.0074, "meanEcc": 0.1534, "stdEcc": 0.1947, "meanInc": -0.5617, "stdInc": 45.2082, "meanOrbPer": 823644.5951, "stdOrbPer": 2351319.8358, "meanRotPer": 35.3809, "stdRotPer": 60.3341, "meanSolMass": 1.3983, "stdSolMass": 1.4836, "meanSolRad": 31.1141, "stdSolRad": 33.9382, "meanTemp": 4060.0025, "stdTemp": 4064.9057]}
+    
+    {set K to ["meanMag": 6.6042, "stdMag": 6.6379, "meanAge": 6010.2791, "stdAge": 7267.2597, "meanTilt": 0, "stdTilt": 0.0373, "meanEcc": 0.1485, "stdEcc": 0.1909, "meanInc": 0.0107, "stdInc": 44.9964, "meanOrbPer": 882481.5341, "stdOrbPer": 2174122.0892, "meanRotPer": 3.0767, "stdRotPer": 3.1592, "meanSolMass": 0.6633, "stdSolMass": 0.6738, "meanSolRad": 0.772, "stdSolRad": 0.8055, "meanTemp": 4410.1101, "stdTemp": 4430.9129]}
+    
+    {set L to ["meanMag": 12.9776, "stdMag": 13.0036, "meanAge": 6816.6632, "stdAge": 7907.1525, "meanTilt": 0.0001, "stdTilt": 0.12, "meanEcc": 0.1401, "stdEcc": 0.184, "meanInc": 0.0214, "stdInc": 44.9046, "meanOrbPer": 1048053.4483, "stdOrbPer": 2972752.3121, "meanRotPer": 1.1709, "stdRotPer": 5.9016, "meanSolMass": 0.1409, "stdSolMass": 0.1441, "meanSolRad": 0.2921, "stdSolRad": 0.2953, "meanTemp": 1659.8878, "stdTemp": 1672.0812]}
+    
+    {set M to ["meanMag": 9.6031, "stdMag": 9.6659, "meanAge": 6583.633, "stdAge": 7722.5699, "meanTilt": 0, "stdTilt": 0.0546, "meanEcc": 0.1455, "stdEcc": 0.1885, "meanInc": 0.0078, "stdInc": 44.9762, "meanOrbPer": 1085685.9328, "stdOrbPer": 2838441.6125, "meanRotPer": 1.9633, "stdRotPer": 2.1398, "meanSolMass": 0.3254, "stdSolMass": 0.3372, "meanSolRad": 0.492, "stdSolRad": 0.5227, "meanTemp": 2808.7248, "stdTemp": 2847.192]}
+    
+    {set MRedGiant to ["meanMag": 7.4675, "stdMag": 8.7636, "meanAge": 7801.5036, "stdAge": 8679.7658, "meanTilt": -0.0001, "stdTilt": 0.059, "meanEcc": 0.1473, "stdEcc": 0.1901, "meanInc": -0.9094, "stdInc": 44.8597, "meanOrbPer": 1054448.1212, "stdOrbPer": 2757901.7229, "meanRotPer": 35.2139, "stdRotPer": 67.9936, "meanSolMass": 0.4989, "stdSolMass": 0.6215, "meanSolRad": 9.3405, "stdSolRad": 17.5582, "meanTemp": 2542.3771, "stdTemp": 2563.8763]}
+    
+    {set MRedSuperGiant to ["meanMag": -2.5469, "stdMag": 2.5892, "meanAge": 1700.5411, "stdAge": 2288.968, "meanTilt": 0.0001, "stdTilt": 0.0046, "meanEcc": 0.1533, "stdEcc": 0.1957, "meanInc": -0.0119, "stdInc": 44.8049, "meanOrbPer": 643428.8386, "stdOrbPer": 1517473.5564, "meanRotPer": 43.8364, "stdRotPer": 263.4144, "meanSolMass": 2.3243, "stdSolMass": 2.4207, "meanSolRad": 46.7285, "stdSolRad": 78.2864, "meanTemp": 4886.9241, "stdTemp": 4905.4407]}
+    
+    {set MS to ["meanMag": 0.1654, "stdMag": 0.4499, "meanAge": 9579.7161, "stdAge": 9883.4047, "meanTilt": 0.0002, "stdTilt": 0.0333, "meanEcc": 0.1539, "stdEcc": 0.1955, "meanInc": 0.0813, "stdInc": 44.9947, "meanOrbPer": 821125.7928, "stdOrbPer": 1918275.6385, "meanRotPer": 115.5872, "stdRotPer": 118.789, "meanSolMass": 1.0978, "stdSolMass": 1.1061, "meanSolRad": 31.0789, "stdSolRad": 31.1131, "meanTemp": 3043.053, "stdTemp": 3051.8507]}
+    
+    {set N to ["meanMag": 4.8379, "stdMag": 4.8494, "meanAge": 7053.3577, "stdAge": 8023.753, "meanTilt": 0, "stdTilt": 0.0251, "meanEcc": 0.1508, "stdEcc": 0.1927, "meanInc": -0.0153, "stdInc": 44.9883, "meanOrbPer": 1004810.072, "stdOrbPer": 2371549.1256, "meanRotPer": 54918.729, "stdRotPer": 110046444.614, "meanSolMass": 0.8282, "stdSolMass": 0.9324, "meanTemp": 5477065.5049, "stdTemp": 7429687.8628]}
+    
+    {set O to ["meanMag": -8.4629, "stdMag": 8.715, "meanAge": 3.0164, "stdAge": 25.5861, "meanTilt": 0, "stdTilt": 0.0017, "meanEcc": 0.1488, "stdEcc": 0.1908, "meanInc": -0.2057, "stdInc": 44.9408, "meanOrbPer": 138770.731, "stdOrbPer": 354540.8432, "meanRotPer": 7.0861, "stdRotPer": 16.8557, "meanSolMass": 26.9519, "stdSolMass": 30.4111, "meanSolRad": 19.0894, "stdSolRad": 45.1065, "meanTemp": 41310.5661, "stdTemp": 41841.4934]}
+    
+    {set S to ["meanMag": 0.1615, "stdMag": 0.4553, "meanAge": 9560.166, "stdAge": 9869.4612, "meanTilt": 0, "stdTilt": 0.0207, "meanEcc": 0.1537, "stdEcc": 0.1951, "meanInc": 0.5739, "stdInc": 44.5961, "meanOrbPer": 860927.8606, "stdOrbPer": 1965131.4772, "meanRotPer": 115.5358, "stdRotPer": 118.7705, "meanSolMass": 1.0994, "stdSolMass": 1.1079, "meanSolRad": 31.129, "stdSolRad": 31.2159, "meanTemp": 3044.5514, "stdTemp": 3053.693]}
+    
+    {set T to ["meanMag": 15.9726, "stdMag": 16.0118, "meanAge": 6741.3847, "stdAge": 7868.7106, "meanTilt": 0.0001, "stdTilt": 0.3883, "meanEcc": 0.1329, "stdEcc": 0.1779, "meanInc": 0.0108, "stdInc": 43.9447, "meanOrbPer": 1035260.068, "stdOrbPer": 3195733.879, "meanRotPer": 0.809, "stdRotPer": 7.5937, "meanSolMass": 0.0689, "stdSolMass": 0.0712, "meanSolRad": 0.1863, "stdSolRad": 0.1892, "meanTemp": 1054.4317, "stdTemp": 1067.4538]}
+    
+    {set TTS to ["meanMag": 13.1029, "stdMag": 14.3693, "meanAge": 83.3817, "stdAge": 105.9014, "meanTilt": -0.0003, "stdTilt": 1.0762, "meanEcc": 0.0992, "stdEcc": 0.1448, "meanInc": -0.0208, "stdInc": 33.9265, "meanOrbPer": 466792.7184, "stdOrbPer": 1859191.3614, "meanRotPer": 2.263, "stdRotPer": 218.2585, "meanSolMass": 0.313, "stdSolMass": 0.5059, "meanSolRad": 0.4411, "stdSolRad": 0.5684, "meanTemp": 2244.1687, "stdTemp": 2910.4869]}
+    
+    {set D to ["meanMag": 11.6776, "stdMag": 11.838, "meanAge": 10620.2873, "stdAge": 10799.5993, "meanTilt": 0.0001, "stdTilt": 0.0911, "meanEcc": 0.1479, "stdEcc": 0.1903, "meanInc": -0.0228, "stdInc": 44.9127, "meanOrbPer": 1071170.0556, "stdOrbPer": 2646146.5398, "meanRotPer": 0.9418, "stdRotPer": 1.1238, "meanSolMass": 0.4891, "stdSolMass": 0.4971, "meanSolRad": 0.0141, "stdSolRad": 0.0143, "meanTemp": 11090.7594, "stdTemp": 12070.1675]}
+    
+    {set W to ["meanMag": -5.6955, "stdMag": 7.2724, "meanAge": 11.7658, "stdAge": 340.0399, "meanTilt": 0, "stdTilt": 0.0011, "meanEcc": 0.1514, "stdEcc": 0.193, "meanInc": -0.28, "stdInc": 44.8832, "meanOrbPer": 100035.7217, "stdOrbPer": 241404.2824, "meanRotPer": 2.4355, "stdRotPer": 2.6691, "meanSolMass": 76.758, "stdSolMass": 80.2784, "meanSolRad": 6.5057, "stdSolRad": 6.8126, "meanTemp": 35481.397, "stdTemp": 40340.5715]}
+    
+    {set Y to ["meanMag": 21.6248, "stdMag": 21.6941, "meanAge": 4101.489, "stdAge": 5632.0001, "meanTilt": 0.0001, "stdTilt": 1.4499, "meanEcc": 0.0528, "stdEcc": 0.086, "meanInc": -0.0333, "stdInc": 19.4948, "meanOrbPer": 35554.287, "stdOrbPer": 640576.5748, "meanRotPer": 2.7539, "stdRotPer": 1992.6662, "meanSolMass": 0.0178, "stdSolMass": 0.0197, "meanSolRad": 0.079, "stdSolRad": 0.0819, "meanTemp": 451.7916, "stdTemp": 466.9517]}
+    
+    {_ Package all individual profiles into the Master Dictionary _}
+    {set astroData to [
+        "A_BlueWhiteSuperGiant": ABlueWhiteSuperGiant,
+        "A": A,
+        "B_BlueWhiteSuperGiant": BBlueWhiteSuperGiant,
+        "B": B,
+        "H": H,
+        "C": C,
+        "CJ": C,
+        "CN": C,
+        "CHd": C,
+        "CH": C,
+        "CS": C,
+        "F_WhiteSuperGiant": FWhiteSuperGiant,
+        "F": F_Star,
+        "G_WhiteYellowSuperGiant": GWhiteYellowSuperGiant,
+        "G": G,
+        "AEBE": AEBE,
+        "K_YellowOrangeGiant": KYellowOrangeGiant,
+        "K": K,
+        "L": L,
+        "M": M,
+        "M_RedGiant": MRedGiant,
+        "M_RedSuperGiant": MRedSuperGiant,
+        "MS": MS,
+        "N": N,
+        "O": O,
+        "S": S,
+        "T": T,
+        "TTS": TTS,
+        "D": D,
+        "DA": D,
+        "DAB": D,
+        "DAV": D,
+        "DAZ": D,
+        "DB": D,
+        "DBV": D,
+        "DBZ": D,
+        "DC": D,
+        "DCV": D,
+        "DQ": D,
+        "WC": W,
+        "WN": W,
+        "WNC": W,
+        "WO": W,
+        "W": W,
+        "Y": Y
+    ]}
+    
+    {set systemAnomalies to []}
+    
+    {for reportbody in system.bodies:
+        {if reportbody.stellarclass:
+            {if reportbody.stellarclass = "SuperMassiveBlackHole":
+                Sagittarius A scanned. Whoa. That thing is big.
+            |elif reportbody.stellarclass = "X" || reportbody.stellarclass = "RoguePlanet" || reportbody.stellarclass = "Nebula" || reportbody.stellarclass = "StellarRemnantNebula":
+                Unknown significant stellar body detected. Report this finding to the developer immediately.
+            }
+            {_ Identify specific short descriptions dynamically within the loop _}
+            {if find(["L", "T", "Y"], reportbody.stellarclass) > -1:
+                {set shortdescription to "brown dwarf"}
+            |elif reportbody.stellarclass = "TTS":
+                {set shortdescription to "T tauri star"}
+            |elif reportbody.stellarclass = "AEBE":
+                {set shortdescription to "proto-star"}
+            |elif reportbody.stellarclass = "WC":
+                {set shortdescription to "carbon rich Wolf-Rayet star"}
+            |elif reportbody.stellarclass = "WN":
+                {set shortdescription to "helium and nitrogen rich Wolf-Rayet star"}
+            |elif reportbody.stellarclass = "WO":
+                {set shortdescription to "oxygen rich Wolf-Rayet star"}
+            |elif reportbody.stellarclass = "WNC" || reportbody.stellarclass = "W":
+                {set shortdescription to "Wolf-Rayet star"} 
+            |elif reportbody.stellarclass = "CS" || reportbody.stellarclass = "CJ":
+                {set shortdescription to "carbon star"}
+            |elif find(["C", "CN", "CH", "CHd"], reportbody.stellarclass) > -1:
+                {set shortdescription to "late-sequence carbon-rich star"}
+            |elif reportbody.stellarclass = "DA":
+                {set shortdescription to "hydrogen-rich white dwarf"}
+            |elif reportbody.stellarclass = "DAB":
+                {set shortdescription to "hydrogen and helium rich white dwarf"}
+            |elif slice(reportbody.stellarclass, 0, 1) = "D":
+                {set shortdescription to "white dwarf"}
+            |elif slice(reportbody.stellarclass, 0, 1) = "N":
+                {set shortdescription to "neutron star"}
+            |elif reportbody.stellarclass = "H":
+                {set shortdescription to "black hole"}
+            |elif reportbody.stellarclass = "X":
+                {set shortdescription to "Exotic stellar entity"}
+            |elif reportbody.stellarclass = "A_BlueWhiteSuperGiant" || reportbody.stellarclass = "B_BlueWhiteSuperGiant":
+                {set shortdescription to "blue-white super-giant"}
+            |elif reportbody.stellarclass = "F_WhiteSuperGiant":         
+                {set shortdescription to "yellow-white super-giant"}
+            |elif reportbody.stellarclass = "M_RedSuperGiant":  
+                {set shortdescription to "red super-giant"}
+            |elif reportbody.stellarclass = "M_RedGiant":
+                {set shortdescription to "red giant"}
+            |elif reportbody.stellarclass = "K_OrangeGiant":
+                {set shortdescription to "orange giant"}
+            |elif reportbody.stellarclass = "RoguePlanet": 
+                {set shortdescription to "Rogue planet"}
+            |elif reportbody.stellarclass = "Nebula" || reportbody.stellarclass = "StellarRemnantNebula":
+                {set shortdescription to "Nebula remnant"}
+            |else:
+                {set shortdescription to cat(reportbody.chromaticity, " star")}
+            }
+        
+            {_ Initialize the custom data dictionaries _}
+            {set planetAnomalies to []}
+            {set planetDescriptions to []}
+        
+            {_ Calculate Z-Scores _}
+            {if has(astroData, reportbody.stellarclass):
+                {set current to astroData[reportbody.stellarclass]}
+                
+                {if has(reportbody, "solarmass"):
+                    {set massString to cat(smartRound(reportbody.solarmass), " solar masses")}
+                    {set anomaly to findAnomaly(reportbody.solarmass, current["meanSolMass"], current["stdSolMass"], "mass", "high", "low", massString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                    }
+                }
+
+                {if has(reportbody, "solarradius") && reportbody.stellarclass != "N":
+                    {set radString to cat(smartRound(reportbody.solarradius), " times sol's radius")}
+                    {set anomaly to findAnomaly(reportbody.solarradius, current["meanSolRad"], current["stdSolRad"], "solar radius", "large", "small", radString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                    }
+                }
+             
+                {if has(reportbody, "rotationalperiod") && reportbody.stellarclass != "H" && reportbody.tidallylocked = false:
+                    {set rotPerString to formatTime(reportbody.rotationalperiod, "days")}
+                    {set anomaly to findAnomaly(reportbody.rotationalperiod, current["meanRotPer"], current["stdRotPer"], "rotational period length", "long", "short", rotPerString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                    }
+                }
+                 
+                {if has(reportbody, "temperature"):
+                    {if reportbody.temperature >= 1000:
+                        {set tempString to cat(Humanise(smartRound(reportbody.temperature)), " degrees kelvin")}
+                    |else:
+                        {set tempString to cat(smartRound(reportbody.temperature), " degrees kelvin")}
+                    }
+                    {set anomaly to findAnomaly(reportbody.temperature, current["meanTemp"], current["stdTemp"], "surface temperature", "high", "low", tempString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                    }
+                }
+                
+                {if has(reportbody, "absolutemagnitude") && reportbody.stellarclass != "H":
+                    {set magString to smartRound(reportbody.absolutemagnitude)}
+                    {set anomaly to findAnomaly(reportbody.absolutemagnitude, current["meanMag"], current["stdMag"], "absolute magnitude", "dim", "bright", magString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                    }
+                }
+                
+                {if has(reportbody, "age"):
+                    {if smartRound(reportbody.age) >= 1000:
+                        {set ageString to cat(smartRound(reportbody.age/1000), " billion years")}
+                    |else:
+                        {set ageString to cat(smartRound(reportbody.age), " million years")}
+                    }
+                    {set anomaly to findAnomaly(reportbody.age, current["meanAge"], current["stdAge"], "age", "old", "young", ageString)}
+                    {if len(anomaly) > 0: 
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                    }
+                }
+                 
+                {_ Build the base introduction for EVERY star _}
+                {if reportbody.mainstar = true:
+                    {set reportname to "alpha"}
+                |else:
+                    {set reportname to Spacialise(reportbody.shortname)}
+                }
+                
+                {set introPhrase to cat("Class ", reportbody.stellarclass, " ", shortdescription, " ", reportname, " scanned. Its subclass is ", reportbody.stellarclass, " ", reportbody.stellarsubclass, " and its luminosity rating is ", speakLuminosity(reportbody.luminosityclass), ". ")}
+                 
+                {_ Check if this specific star triggered any anomalies _}
+                {if len(planetAnomalies) > 0:
+                    {_ Stitch the intro and the anomaly descriptions together _}
+                    {set starReport to cat(introPhrase, "It is in the ", List(planetAnomalies), " compared to other stars of its type. It has ", List(planetDescriptions), ". ")}
+                |else:
+                    {_ If it's a completely average star, just use the intro phrase _}
+                    {set starReport to introPhrase}
+                }
+                
+                {_ Shove the finished report into the master system array _}
+                {set systemAnomalies to cat(systemAnomalies, [starReport])}
+            }
+        }
+    }
+    
+    {_ Speech Output _}
+    {if len(systemAnomalies) > 0:
+        {join(systemAnomalies, " ")}
+    }
+}

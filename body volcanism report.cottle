@@ -1,0 +1,36 @@
+{_ Fetch from context _}
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+
+{if !reportbody.name || reportbody.name = "":
+    I'm not sure which body you are asking about.
+|else:
+    {if (reportbody.volcanism || len(reportbody.volcanism) > 0):
+        
+        Thermal imaging shows
+
+        {if reportbody.volcanism.type = "Geysers":
+            {if reportbody.volcanism.invariantAmount = 'Major':
+                {OneOf("high numbers of", "major", "a large amount of", "planet-wide")}
+            |elif reportbody.volcanism.invariantAmount = 'Minor':
+                {OneOf("low numbers of", "minor", "a low amount of", "localized")}
+            }
+            active {reportbody.volcanism.composition} geysers
+            {Occasionally(2, "at the surface")}
+        |else:
+            {if reportbody.volcanism.invariantAmount = 'Major':
+                {OneOf("high levels of", "major", "a large amount of", "planet-wide")}
+            |elif reportbody.volcanism.invariantAmount = 'Minor':
+                {OneOf("low levels of", "minor", "a low amount of", "localized")}
+            }
+            active {reportbody.volcanism.composition} 
+            {OneOf(
+                "lava flows {Occasionally(2, 'at the surface')}",
+                OneOf("magma flows near the surface", "sub-surface magma flows")
+            )}
+        }
+        .
+    }
+}

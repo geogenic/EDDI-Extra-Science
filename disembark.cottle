@@ -1,0 +1,210 @@
+{set reportbody to BodyDetails(state.eddi_context_body_name, state.eddi_context_body_system)}
+{if !reportbody: 
+    {set reportbody to BodyDetails(state.eddi_context_body_name)}
+}
+{_ Define function for converting decimals to fractions _}
+{set ToFraction(val) to: 
+    {if val < 0.1:
+        less than one tenth of
+    |elif val = 0.1:
+        one tenth of
+    |elif val = 0.125:
+        one eighth of
+    |elif val < 0.125:
+        less than one eighth of
+    |elif val = 0.2:
+        one fifth of
+    |elif val < 0.2:
+        less than one fifth of
+    |elif val = 0.25:
+        one quarter of
+    |elif val < 0.25:
+        less than one quarter of
+    |elif val = 0.33:
+        one third of
+    |elif val < 0.33:
+        less than one third of
+    |elif val = 0.5:
+        half of
+    |elif val < 0.5:
+        less than half of
+    |elif val = 0.75:
+        three quarters of
+    |elif val < 0.75:
+        less than three quarters of
+    |elif val >= 0.75 && val <= 1.25:
+        similar to
+    |else:
+        {round(val, 1)} times
+    }
+}
+
+{_ Function to round numbers dynamically _}
+{set abs(val) to:
+    {if val < 0:
+        {return val * -1}
+    |else:
+        {return val}
+    }
+}
+{set smartRound(val) to:
+    {set absVal to abs(val)}
+    {if absVal < 0.01:
+        {return round(val, 3)}
+    |elif absVal < 0.1:
+        {return round(val, 2)}
+    |elif absVal < 10:
+        {return round(val, 1)}
+    |else:
+        {return round(val, 0)}
+    }
+}
+
+{_ 1. Set our default assumption _}
+    {set isMoon to false}
+
+    {set isMoon to false}
+
+    {_ Scan the parent hierarchy directly _}
+    {for parent in reportbody.parents:
+        {if parent.name = "Planet":
+            {set isMoon to true}
+        }
+    }
+        
+    {_ 1. Set our default assumption _}
+    {set isBinaryPair to false}
+
+    {_ 1. Verify the body orbits a barycenter _}
+    {if len(reportbody.parents) > 0 && reportbody.parents[0].name = "Null":
+    
+    {_ Grab the unique ID of the barycenter this planet orbits _}
+    {set baryID to reportbody.parents[0].id}
+    {set isStellarBarycenter to false}
+    
+    {_ 2. Ask the system if any STARS share this exact barycenter ID _}
+    {for sibling in system.bodies:
+        {if len(sibling.parents) > 0 && sibling.parents[0].id = baryID:
+            
+            {_ If a sibling sharing this center is a star, flag it _}
+            {if sibling.stellarclass:
+                {set isStellarBarycenter to true}
+            }
+        }
+    }
+    
+    {_ 3. If no stars are present, the planets are orbiting each other! _}
+    {if !isStellarBarycenter:
+        
+        {_ Optional: Check if it's a binary moon pair by seeing if the Null orbits a Planet _}
+        {if len(reportbody.parents) > 1 && reportbody.parents[1].name = "Planet":
+            {_ It is a binary moon pair _}
+            {set isBinaryPair to true}
+        |else:
+            {_ It is a true binary planet pair _}
+            {set isBinaryPair to true}
+        }
+    }
+}
+
+{SetState("first_footfall", false)}
+
+{if reportbody.solarday < 0:
+    {set absSolar to reportbody.solarday*-1}
+|else:
+    {set absSolar to reportbody.solarday}
+}
+
+{if status.landed = true || event.fromsrv = true:
+
+    {if state.first_footfall = false:
+    
+        {Pause(8000)}
+
+        {_ Define functions for converting temperature scales _}
+{set ToCelsius(kelvin) to: {smartRound(kelvin - 273)}}
+{set ToFahrenheit(kelvin) to: {smartRound((kelvin-273)*9/5 + 32)}}
+{set TempCalc(kelvin) to: 
+    {if state.reportatmotempscale = 0: {smartRound(kelvin)}}
+    {if state.reportatmotempscale = 1: {ToCelsius(kelvin)}}
+    {if state.reportatmotempscale = 2: {ToFahrenheit(kelvin)}}
+}
+
+{_ Name our temperature scale _}
+{if state.reportatmotempscale = 0: {set tempscale to: Kelvin}}
+{if state.reportatmotempscale = 1: {set tempscale to: degrees Celsius}}
+{if state.reportatmotempscale = 2: {set tempscale to: degrees Fahrenheit}}
+
+{set temp to: {TempCalc(smartRound(reportbody.temperature))}}
+    {if find(temp, "-") >= 0: 
+        {set temp to cat(temp*-1, tempscale, " below zero")}
+    |else:
+        {set temp to cat(temp, tempscale)}
+    }
+
+        Welcome to {body.name}.
+
+        {if reportbody.alreadydiscovered = false:
+            First footfall confirmed and transmitted to universal cartographics. You are the first explorer to walk on this {reportbody.planettype}, and the name {cmdr.phoneticname}, of {cmdr.squadronname}, will be forever immortalized in the recordbooks.
+        }
+
+        The current temperature is
+
+        {temp} under clear skies.
+
+        Surface gravity is {smartRound(reportbody.gravity)} g, {ToFraction(smartRound(reportbody.gravity))} Earth's.
+
+        {if reportbody.tidallylocked = false && isMoon = false && !isBinaryPair && round(((absSolar/2)*24), 1) >= 48 && round(((absSolar/2)*24), 1) < 365:
+            
+            This {reportbody.bodytype} has an average of {smartRound((absSolar/2))} earth days worth of daylight from sunrise to sunset.
+            
+            A full sunrise or sunset at the equator would last approximately
+                     
+            {if round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 1:
+                {smartRound(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)))} hours.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) < 1:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))*60))} minutes.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 24:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))/24))} earth days.
+            }
+        }
+
+        {if reportbody.tidallylocked = true:
+            This {reportbody.bodytype} has no sunrises or sunsets - it is tidally locked and has no day night cycle.
+        }
+
+        {if reportbody.tidallylocked = false && isMoon = false && !isBinaryPair && round(((absSolar/2)*24), 1) < 48:
+
+            This {reportbody.bodytype} has an average of {smartRound(((absSolar/2)*24))} hours of daylight from sunrise to sunset.
+            
+            A full sunrise or sunset at the equator would last approximately
+                     
+            {if round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 1:
+                {smartRound(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)))} hours.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) < 1:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))*60))} minutes.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 24:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))/24))} earth days.
+            }
+        }
+
+        {if reportbody.tidallylocked = false && isMoon = false && !isBinaryPair && round(((absSolar/2)), 1) >= 365:
+            This {reportbody.bodytype} has an average of {smartRound(((absSolar/2)/365))} earth years worth of daylight from sunrise to sunset.
+            
+            A full sunrise or sunset at the equator would last approximately
+                     
+            {if round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 1:
+                {smartRound(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)))} hours.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) < 1:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))*60))} minutes.
+            |elif round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) > 24:
+                {smartRound((((((absSolar*24)/24)/(absSolar*24))*(absSolar*24))/24))} earth days.
+            }
+        }
+
+        Soil analysis complete. Results show {smartRound(reportbody.solidcompositions[0].percent)} percent {reportbody.solidcompositions[0].name}, {smartRound(reportbody.solidcompositions[1].percent)} percent {reportbody.solidcompositions[1].name}, and {smartRound(reportbody.solidcompositions[2].percent)} percent {reportbody.solidcompositions[2].name}.
+
+        {F("[EXTRA SCIENCE] Body materials report")}
+        }
+    {SetState("first_footfall", true)}
+}
