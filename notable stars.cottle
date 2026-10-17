@@ -365,12 +365,12 @@
                     {set reportname to Spacialise(reportbody.shortname)}
                 }
                 
-                {set introPhrase to cat("Class ", reportbody.stellarclass, " ", shortdescription, " ", reportname, " scanned. Its subclass is ", reportbody.stellarclass, " ", reportbody.stellarsubclass, " and its luminosity rating is ", speakLuminosity(reportbody.luminosityclass), ". ")}
+                {set introPhrase to cat(". . . Class ", reportbody.stellarclass, " ", shortdescription, " ", reportname, " scanned. Its subclass is ", reportbody.stellarclass, " ", reportbody.stellarsubclass, " and its luminosity rating is ", speakLuminosity(reportbody.luminosityclass), ".")}
                  
                 {_ Check if this specific star triggered any anomalies _}
                 {if len(planetAnomalies) > 0:
                     {_ Stitch the intro and the anomaly descriptions together _}
-                    {set starReport to cat(introPhrase, "It is in the ", List(planetAnomalies), " compared to other stars of its type. It has ", List(planetDescriptions), ". ")}
+                    {set starReport to cat(introPhrase, "It is in the ", List(planetAnomalies), " compared to other stars of its type. It has ", List(planetDescriptions), ".")}
                 |else:
                     {_ If it's a completely average star, just use the intro phrase _}
                     {set starReport to introPhrase}

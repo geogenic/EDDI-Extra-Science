@@ -88,8 +88,6 @@
             
         {_ Gas Giants _}
         
-        {OneOf("Albedo", "Reflectivity", "Ionization")} scan is complete.
-        
         {_ Map custom scientific names for specific gases _}
         {if find(topGas, "Helium") >= 0: 
             {set gasName to cat("noble gasses, with the highest concentration being ", topGas)}
@@ -103,7 +101,7 @@
 
         {_ Output the dynamic description _}
         {if topGasPercent <= 65:
-            This planet's clouds have a mixed chemical composition with no single compound contributing more than two thirds of their volume.
+            This planet's clouds have a mixed chemical composition with no single compound contributing more than two thirds of their volume, but exhibit characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} {reportbody.atmosphere} atmosphere.
         |else:
             {OneOf("This planet's clouds are mainly composed of {gasName}", "This planet's clouds are rich in {gasName}", "This planet's clouds contain high levels of {gasName}")}.
         }
@@ -205,8 +203,6 @@
     
         {_ All other atmospheric bodies _}
         
-        {OneOf("Albedo", "Reflectivity", "Ionization")} scan is complete.
-        
         {if reportbody.pressure < 0.1:
             {set pressdesc to OneOf("trace gas", "super thin")}
         |elif reportbody.pressure < 0.25:
@@ -250,9 +246,9 @@
 
         {_ Output the dynamic description _}
         {if topGasPercent <= 65:
-            The atmosphere has a mixed composition with no single compound contributing more than two thirds of it's volume.
+            This planet's atmosphere has a mixed composition with no single compound contributing more than two thirds of it's volume, but exhibits characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} atmosphere.
         |else:
-            {OneOf("The {pressdesc} atmosphere is composed of {gasName}", "The {pressdesc} atmosphere is rich in {gasName}", "The {pressdesc} atmosphere contains high levels of {gasName}")}.
+            {OneOf("This planet's {pressdesc} atmosphere is composed of {gasName}", "This planet's {pressdesc} atmosphere is rich in {gasName}", "This planet's {pressdesc} atmosphere contains high levels of {gasName}")}.
         }
         
         {if (state.report_atmo_comp > 0 && reportbody.landable = true) || state.report_atmo_comp > 1:
@@ -539,10 +535,12 @@
 {if (reportbody.landable = true && topGasPercent > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.immersion > 1) || (reportbody.landable = false && state.immersion > 0 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.immersion > 0 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
         
     {_ Surface conditions _}
-    
+    {set prelimSurfScan to 0}
     {if (reportbody.landable = true && topGasPercent > 0 && state.report_temp > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp > 2) || (reportbody.landable = false && state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
     
         Preliminary surface scans show
+        
+        {set prelimSurfScan to 1}
         
         {set temp to: {TempCalc(smartRound(reportbody.temperature))}}
         {if find(temp, "-") >= 0: 
@@ -572,11 +570,14 @@
     {if reportbody.landable = true:
         {Occasionally(4, "Need to stretch your legs commander?")}
         {if state.report_temp = 0 || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp < 3) || (reportbody.landable = false && state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
-            Preliminary surface scans show that
-        }
+            {if prelimSurfScan = 0:
+                Preliminary surface scans show that
+                {set prelimSurfScan to 1}
+            }
         {reportbody.bodytype} {Spacialise(reportbody.shortname)} is landable with survivable surface conditions and surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
-    | elif reportbody.landable = false && find(reportbody.planettype, "giant") < 0:
-        {reportbody.bodytype} {Spacialise(reportbody.shortname)} has surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
+        | elif reportbody.landable = false && find(reportbody.planettype, "giant") < 0:
+            {reportbody.bodytype} {Spacialise(reportbody.shortname)} has surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
+        }
     }
         
     {set isMoon to false}
@@ -680,7 +681,7 @@
             }
         }
          
-    |elif reportbody.tidallylocked = true:
+    |elif reportbody.tidallylocked = true && ((reportbody.landable = true && topGasPercent > 0 && state.report_orbit > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_orbit > 2) || (reportbody.landable = false && state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0)):
         This body has no sunrises or sunsets - it is tidally locked and has no day night cycle.
     }
 }

@@ -28,18 +28,23 @@ Set to 2 if want to hear extended info for every body. _}
                             
 {SetState('report_temp', 1)}
 {_ Set to 0 if you don't want to hear temperatures of planets and stars _}
-{_ Set to 1 if you want to hear temperatures only for stars and landable planets with atmospheres _}
-{_ Set to 2 if you want to hear temperatures only for stars and planets with atmospheres (including gas giants) _}
+{_ Set to 1 if you want to hear temperatures for stars and landable planets with atmospheres _}
+{_ Set to 2 if you want to hear temperatures for stars and all planets with atmospheres (including gas giants) _}
 {_ Set to 3 if you want to hear temperatures for all planets and stars _}
 
 {SetState('report_gas_giant_class', 1)}
 {_ Set to 0 if you don't want to hear descriptions of gas giant classes _}
+{_ Set to 1 if you want to hear descriptions of gas giant classes _}
 
 {SetState('report_orbit', 1)}
-{_ Set to 0 if you don't want to hear about day / night cycles or orbital periods _}
+{_ Set to 0 if you don't want to hear about day / night cycles and orbital periods _}
 {_ Set to 1 if you want to hear orbit info only for stars and landable planets with atmospheres _}
 {_ Set to 2 if you want to hear orbit info only for stars and planets with atmospheres (including gas giants) _}
 {_ Set to 3 if you want to hear orbit info for all planets and stars _}
+
+{SetState('report_notable_orbit', 0)}
+{_ Set to 0 if you don't want to hear about notable orbit inclincation, eccentricity, and axial tilt values _}
+{_ Set to 1 if you do want to hear about notable orbit inclincation, eccentricity, and axial tilt values _}
 
 {SetState('report_atmo_comp', 1)}
 {_ Set to 0 if you don't want to hear about the percentage composition of atmospheres _}
@@ -58,6 +63,11 @@ Set to 2 if want to hear extended info for every body. _}
 
 {SetState('report_climate', 1)}
 {_ Set to 0 if you don't want to hear about the climate classifications of atmospheric planets _}
+{_ Set to 1 if you want to hear about the climate classifications of atmospheric planets _}
+
+{SetState('extended_percentile', 0)}  
+{_ Set to 0 if you want to hear only the percentile readout for notable planets _}
+{_ Set to 1 if you want to hear percentiles and the relevent exact values _}
 
 {_ MAIN SCRIPT _}
 {_ ---------------------------------------------------------------------------------------------- _}

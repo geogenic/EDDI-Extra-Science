@@ -307,25 +307,31 @@
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
         }
         
-        {set tiltString to cat(smartRound(abs(reportbody.tilt*(180/3.14))), " degrees")}
-        {set anomaly to findAnomaly(abs(reportbody.tilt), abs(current["meanTilt"]), current["stdTilt"], "axial tilt", "steep", "shallow", tiltString)}
-        {if len(anomaly) > 0: 
-            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
-            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        {if state.report_notable_orbit != 0:
+            {set tiltString to cat(smartRound(abs(reportbody.tilt*(180/3.14))), " degrees")}
+            {set anomaly to findAnomaly(abs(reportbody.tilt), abs(current["meanTilt"]), current["stdTilt"], "axial tilt", "steep", "shallow", tiltString)}
+            {if len(anomaly) > 0: 
+                {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            }
         }
         
-        {set eccString to smartRound(reportbody.eccentricity)}
-        {set anomaly to findAnomaly(reportbody.eccentricity, current["meanEcc"], current["stdEcc"], "eccentricity", "high", "", eccString)}
-        {if len(anomaly) > 0: 
-            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
-            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        {if state.report_notable_orbit != 0:
+            {set eccString to smartRound(reportbody.eccentricity)}
+            {set anomaly to findAnomaly(reportbody.eccentricity, current["meanEcc"], current["stdEcc"], "eccentricity", "high", "", eccString)}
+            {if len(anomaly) > 0: 
+                {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            }
         }
         
-        {set incString to cat(smartRound(abs(reportbody.inclination)), " degrees")}
-        {set anomaly to findAnomaly(abs(reportbody.inclination), abs(current["meanInc"]), current["stdInc"], "orbit inclination", "steep", "shallow", incString)}
-        {if len(anomaly) > 0: 
-            {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
-            {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+        {if state.report_notable_orbit != 0:
+            {set incString to cat(smartRound(abs(reportbody.inclination)), " degrees")}
+            {set anomaly to findAnomaly(abs(reportbody.inclination), abs(current["meanInc"]), current["stdInc"], "orbit inclination", "steep", "shallow", incString)}
+            {if len(anomaly) > 0: 
+                {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            }
         }
         
         {set orbPerString to formatTime(reportbody.orbitalperiod, "years")}
@@ -380,7 +386,7 @@
     {if len(planetAnomalies) > 0:
     
         {if find(reportbody.planettype, "Class I gas") >= 0:
-            This class one gas giant is in the {List(planetAnomalies)} compared to other planets of its type. It has {List(planetDescriptions)}.
+            This class one gas giant is in the {List(planetAnomalies)} compared to other planets of its type.
         |else:
             This {reportbody.planettype} is in the {List(planetAnomalies)} compared to other
             
@@ -390,7 +396,12 @@
                 planets
             }
             
-            of its type. It has {List(planetDescriptions)}.
+            of its type.
+        }
+        
+        {_ Check global variable before speaking the descriptions _}
+        {if state.extended_percentile != 0:
+            It has {List(planetDescriptions)}.
         }
     }
     

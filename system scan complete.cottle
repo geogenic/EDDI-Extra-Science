@@ -37,7 +37,7 @@
                         {_ Compare the moon's orbit to the ring boundaries _}
                         {for ring in body.rings:
                             {if reportbody.semimajoraxis && reportbody.semimajoraxis > 0:
-                                {if (reportbody.semimajoraxis*299792.458) <= (ring.outerradius * 1.05):
+                                {if (reportbody.semimajoraxis*149597870.7) <= (ring.outerradius * 1.05):
                                     {set isShepherd to true}
                                 }
                             }
@@ -88,7 +88,7 @@
                         }
                         
                         {_ Calculate the physical distance between the two bodies _}
-                        {set binaryDistance to (reportbody.semimajoraxis*299792.458) + (sibling.semimajoraxis*299792.458)}
+                        {set binaryDistance to (reportbody.semimajoraxis*149597870.7) + (sibling.semimajoraxis*149597870.7)}
                         {set combinedRadii to (reportbody.radius + siblingRadius)}
                         {if binaryDistance < (combinedRadii * 6):
                             {set isCloseOrbit to true}
@@ -100,7 +100,7 @@
             |else:
                 {for parentBody in system.bodies:
                     {if parentBody.bodyId = directParentID: 
-                        {if (reportbody.semimajoraxis*299792.458) < (parentBody.radius * 5):
+                        {if (reportbody.semimajoraxis*149597870.7) < (parentBody.radius * 5):
                             {set isCloseOrbit to true}
                         }
                     }
@@ -139,8 +139,8 @@
     
     {_ Read the final grouped report _}
     {if len(finalSpeech) > 0:
-        System scan complete. {join(finalSpeech, " ")}
+        . . . System scan complete. {join(finalSpeech, " ")}
     |else:
-        System scan complete.
+        . . . System scan complete.
     }
 }

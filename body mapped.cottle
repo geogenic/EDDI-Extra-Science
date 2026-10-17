@@ -46,23 +46,34 @@
     {set ring to "ring"}
 }.
 
-{if reportbody.temperature > 700 && reportbody.landable = true:
-    Take caution on the surface
-    {if reportbody.gravity > 2.69 && reportbody.landable = true:
-        and when landing
-    }
-    . This {reportbody.planettype} has surface temperatures
-    {if reportbody.gravity > 2.69 && reportbody.landable = true:
-        and gravity
-    }
-    that exceed the limits of your exploration suit, and will be acutely hazardous to your health.
-    {if reportbody.gravity > 2.69 && reportbody.landable = true:
-        The high gravity will also make landing here a challenge. Be sure to descend slowly once you are out of glide.
-    }
-}
+{if reportbody.landable = true && (reportbody.temperature > 700 || reportbody.gravity > 1):
 
-{if reportbody.gravity > 2.69 && reportbody.landable = true && reportbody.temperature < 700:
-    Take caution on the surface and when landing. This {reportbody.planettype} has surface gravity that exceeds the limits of your exploration suit, and will make landing here a challenge. Be sure to descend slowly once you are out of glide.
+    {_ Hazard flags _}
+    {set lethalTemp to reportbody.temperature > 700}
+    {set lethalGrav to reportbody.gravity > 2.69}
+    {set hardLanding to reportbody.gravity > 1}
+
+    {_ On-foot hazards _}
+    {if lethalTemp || lethalGrav:
+        Take caution when disembarking. This {reportbody.planettype} has 
+        {if lethalTemp && lethalGrav:
+            surface temperatures and gravity that exceed
+        |elif lethalTemp:
+            surface temperatures that exceed
+        |else:
+            surface gravity that exceeds
+        }
+        the limits of your exploration suit, and will be acutely hazardous to your health.
+    }
+
+    {_ Flight hazards _}
+    {if hardLanding:
+        This planet's high surface gravity will
+        {if lethalTemp || lethalGrav:
+            also
+        }
+        make landing here a challenge. Be sure to descend slowly once you are out of glide.
+    }
 }
 
 {Pause(2000)}
