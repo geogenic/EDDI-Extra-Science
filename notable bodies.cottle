@@ -18,6 +18,26 @@
 
     {reportbody.bodytype} {Spacialise(reportbody.shortname)} scanned.
     
+    {if find(reportbody.planettype, "Ammonia world") >= 0:
+        This body is an uncommon type of planet classified as an ammonia world. These planets are {OneOf("analogous", "similar", "comparable")} to other terrestrial atmospheric planets, but are {OneOf("unique", "different")} in that they have ammonia-based life and {OneOf("large amounts", "significant reserves", "a significant amount")} of liquid ammonia at the surface trapped in lakes and oceans. Ammonia worlds like this one {OneOf("possess", "have", "feature")} an active weather system {OneOf("analogous", "similar", "comparable", "akin")} to Earth's, including {OneOf("destructive", "severe", "catastrophic", "damaging")} storms that produce liquid ammonia and methane rain.
+    |elif find(reportbody.planettype, "Earth-like world") >= 0:
+        This body is a rare type of planet classified as an earth-like world. These planets are {OneOf("analogous", "extremely similar", "comparable")} to Earth in the sol system, with diverse carbon-based life and abundant liquid water at the surface.
+    |elif find(reportbody.planettype, "Water world") >= 0:
+        This body is a rare type of planet classified as a water world. These planets have abundant liquid water at the surface, but no landmasses or solid ground above the water line. Water worlds like this one {OneOf("possess", "have", "feature")} an active weather system {OneOf("analogous", "similar", "comparable", "akin")} to Earth's, including {OneOf("massive", "colossal", "gigantic", "huge", "immense", "vast")} {OneOf("destructive", "severe", "catastrophic", "damaging")} {OneOf("cyclones", "monsoons", "hurricanes", "typhoons", "tempests")} that {OneOf("traverse", "travel across")} the planet's oceans.
+    |elif find(reportbody.planettype, "ammonia based life") >= 0:
+        This is {OneOf("fascinating", "intriguing")} commander. {OneOf("I am", "Sensors are", "Long range scans are")} {OneOf("detecting", "seeing", "picking up")} signs of life {OneOf("within", "inside of")} an ammonia cloud layer deep in the atmosphere of this planet. This layer also contains {OneOf("an excess of", "substantial amounts of", "")} oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton {OneOf("floating", "hovering", "swimming")} {OneOf("within", "inside")} it. These organisms appear to {OneOf("behave", "act", "function", "operate")} {OneOf("analogously", "similarly", "comparably")} to algae on Earth, and are feeding off the {OneOf("intense", "energetic", "excessive", "powerful")} radiation hitting this planet.
+    |elif find(reportbody.planettype, "water based life") >= 0:
+        This is {OneOf("fascinating", "intriguing")} commander. {OneOf("I am", "Sensors are", "Long range scans are")} {OneOf("detecting", "seeing", "picking up")} signs of life {OneOf("within", "inside of")} a cloud layer deep in the atmosphere of this planet. This layer also contains {OneOf("an excess of", "substantial amounts of", "")} oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton {OneOf("floating", "hovering", "swimming")} {OneOf("within", "inside")} it. These organisms appear to {OneOf("behave", "act", "function", "operate")} {OneOf("analogously", "similarly", "comparably")} to algae on Earth, and are feeding off the {OneOf("intense", "energetic", "excessive", "powerful")} radiation hitting this planet.
+    |elif find(reportbody.planettype, "helium-rich") >= 0:
+        This planet has a greatly inflated percentage of helium compared to the hydrogen in its atmosphere. Helium giants like this one form in hotter {OneOf("areas", "regions")} of star systems, which {OneOf("contributes to", "exacerbates", "accelerates")} the {OneOf("loss", "evaporation", "burnoff")} of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
+    |elif find(reportbody.planettype, "helium") >= 0:
+        This planet has lost most of the hydrogen in its atmosphere due to its {OneOf("unusually low", "below average")} mass compared to other gas giants. Helium giants like this one form in hotter {OneOf("areas", "regions")} of star systems, which {OneOf("contributes to", "exacerbates", "accelerates")} the {OneOf("loss", "evaporation", "burnoff")} of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
+    |elif find(reportbody.planettype, "water giant") >= 0:
+        This body is an uncommon type of planet classified as a water giant, and likely formed when a {OneOf("massive", "colossal", "gigantic", "huge", "immense", "vast", "large")} icy body warmed up enough for its surface ice to evaporate into water vapor. This would have {OneOf("triggered", "caused", "produced", "prompted", "provoked", "started", "resulted in")} a runaway greenhouse effect leading to a very thick atmosphere made up of ice crystals and water vapor.
+    |elif find(reportbody.planettype, "giant") < 0:
+        It is {if StartsWithVowel(reportbody.planettype): an |else: a } {reportbody.planettype}.
+    }
+    
     {_ Function to round numbers dynamically _}
     {set abs(val) to:
         {if val < 0:
@@ -106,48 +126,56 @@
         {return timeStr}
     }
     
+    {_ Custom Function to Calculate Z-Scores _}
     {set findAnomaly(scannedValue, mean, stdDev, statName, highAdj, lowAdj, valString) to:
         {set zScore to (scannedValue - mean) / stdDev}
         
         {if zScore > 3.0:
             {return [
                 "percentile": cat("99 point ninth Percentile for ", statName), 
-                "desc": cat("an extraordinarily ", highAdj, " ", statName, " of ", valString)
+                "desc": cat("an extraordinarily ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("an extraordinarily ", highAdj, " ", statName)
             ]}
         |elif zScore > 2.0:
             {return [
                 "percentile": cat("98th Percentile for ", statName), 
-                "desc": cat("a very ", highAdj, " ", statName, " of ", valString)
+                "desc": cat("a very ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("a very ", highAdj, " ", statName)
             ]}
         |elif zScore > 1.0:
             {return [
                 "percentile": cat("84th Percentile for ", statName), 
-                "desc": cat("an unusually ", highAdj, " ", statName, " of ", valString)
+                "desc": cat("an unusually ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("an unusually ", highAdj, " ", statName)
             ]}
         |elif zScore < -3.0 && lowAdj != "":
             {return [
                 "percentile": cat("bottom one tenth of one percent for ", statName), 
-                "desc": cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString)
+                "desc": cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("an extraordinarily ", lowAdj, " ", statName)
             ]}
         |elif zScore < -2.0 && lowAdj != "":
             {return [
                 "percentile": cat("2nd Percentile for ", statName), 
-                "desc": cat("a very ", lowAdj, " ", statName, " of ", valString)
+                "desc": cat("a very ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("a very ", lowAdj, " ", statName)
             ]}
         |elif zScore < -1.0 && lowAdj != "":
             {return [
                 "percentile": cat("16th Percentile for ", statName), 
-                "desc": cat("an unusually ", lowAdj, " ", statName, " of ", valString)
+                "desc": cat("an unusually ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("an unusually ", lowAdj, " ", statName)
             ]}
         }
         
-        {_ Return a completely empty dictionary if the planet is average _}
+        {_ Return a completely empty array if the body is average _}
         {return []}
     }
 
     {_ Initialize the custom data dictionaries _}
     {set planetAnomalies to []}
     {set planetDescriptions to []}
+    {set planetSummaries to []}
     
     {_ Define individual planet profiles _}
     {set ammoniaWorld to ["meanMass": 6.2799, "stdMass": 19.8256, "meanGrav": 1.2952, "stdGrav": 1.8376, "meanTilt": -0.0044, "stdTilt": 0.895, "meanEcc": 0.0382, "stdEcc": 0.0821, "meanInc": -0.0299, "stdInc": 17.0794, "meanOrbPer": 1967.3645, "stdOrbPer": 4799.2827, "meanRad": 8408.8509, "stdRad": 9898.005, "meanRotPer": 25.5202, "stdRotPer": 64.212, "meanPress": 1580.6746, "stdPress": 14923.1568, "meanTemp": 205.9566, "stdTemp": 209.6219]}
@@ -194,7 +222,7 @@
     
     {set earthLikeWorldMoon to ["meanMass": 0.4069, "stdMass": 0.4796, "meanGrav": 0.6596, "stdGrav": 0.6741, "meanTilt": -0.0056, "stdTilt": 0.4734, "meanEcc": 0.0014, "stdEcc": 0.0103, "meanInc": -0.6278, "stdInc": 47.3059, "meanOrbPer": 102.1246, "stdOrbPer": 194.4529, "meanRad": 4881.0366, "stdRad": 4942.7294, "meanRotPer": 40.7001, "stdRotPer": 55.3716, "meanPress": 0.7995, "stdPress": 0.951, "meanTemp": 281.1657, "stdTemp": 281.6189]}
     
-    {set highMetalContentWorld to ["meanMass": 1.0475, "stdMass": 2.9096, "meanGrav": 0.8064, "stdGrav": 1.0675, "meanTilt": -0.0043, "stdTilt": 0.8648, "meanEcc": 0.0271, "stdEcc": 0.0759, "meanInc": -0.031, "stdInc": 17.5778, "meanOrbPer": 1332.3433, "stdOrbPer": 32409.3893, "meanRad": 4334.9637, "stdRad": 5128.2822, "meanRotPer": 20.6322, "stdRotPer": 61.1736, "meanPress": 1.1517, "stdPress": 1.5095, "meanTemp": 625.9059, "stdTemp": 1035.1896]}
+    {set highMetalContentWorld to ["meanMass": 1.0475, "stdMass": 2.9096, "meanGrav": 0.8064, "stdGrav": 1.0675, "meanTilt": -0.0043, "stdTilt": 0.8648, "meanEcc": 0.0271, "stdEcc": 0.0759, "meanInc": -0.031, "stdInc": 17.5778, "meanOrbPer": 1332.3433, "stdOrbPer": 32409.3893, "meanRad": 4334.9637, "stdRad": 5128.2822, "meanRotPer": 20.6322, "stdRotPer": 61.1736, "meanPress": 63325.9776, "stdPress": 5641524.064, "meanTemp": 625.9059, "stdTemp": 1035.1896]}
     
     {set highMetalContentWorldMoon to ["meanMass": 0.1408, "stdMass": 0.4348, "meanGrav": 0.376, "stdGrav": 0.4611, "meanTilt": -0.005, "stdTilt": 0.8864, "meanEcc": 0.0124, "stdEcc": 0.0359, "meanInc": 0.0025, "stdInc": 2.7461, "meanOrbPer": 5.0572, "stdOrbPer": 8.7837, "meanRad": 2425.82, "stdRad": 2817.9575, "meanRotPer": 5.1381, "stdRotPer": 8.6649, "meanPress": 795.8505, "stdPress": 85228.672, "meanTemp": 297.9797, "stdTemp": 406.2542]}
     
@@ -259,10 +287,10 @@
         "Class IV gas giant Moon": class4GasGiantMoon,
         "Class V gas giant": class5GasGiant,
         "Class V gas giant Moon": class5GasGiantMoon,
-        "Gas giant with ammonia‑based life": ammoniaLifeGasGiant,
-        "Gas giant with ammonia‑based life Moon": ammoniaLifeGasGiantMoon,
-        "Gas giant with water‑based life": waterLifeGasGiant,
-        "Gas giant with water‑based life Moon": waterLifeGasGiantMoon,
+        "Gas giant with ammonia based life": ammoniaLifeGasGiant,
+        "Gas giant with ammonia based life Moon": ammoniaLifeGasGiantMoon,
+        "Gas giant with water based life": waterLifeGasGiant,
+        "Gas giant with water based life Moon": waterLifeGasGiantMoon,
         "Helium gas giant": heliumGasGiant,
         "Helium gas giant Moon": heliumGasGiantMoon,
         "Helium-rich gas giant": heliumRichGasGiant,
@@ -298,6 +326,7 @@
         {if len(anomaly) > 0: 
             {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
         }
         
         {set gravString to cat(smartRound(reportbody.gravity), " g")}
@@ -305,6 +334,7 @@
         {if len(anomaly) > 0: 
             {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
         }
         
         {if state.report_notable_orbit != 0:
@@ -313,6 +343,7 @@
             {if len(anomaly) > 0: 
                 {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                 {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
             }
         }
         
@@ -322,6 +353,7 @@
             {if len(anomaly) > 0: 
                 {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                 {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
             }
         }
         
@@ -331,6 +363,7 @@
             {if len(anomaly) > 0: 
                 {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                 {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
             }
         }
         
@@ -339,6 +372,7 @@
         {if len(anomaly) > 0: 
             {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
         }
         
         {if reportbody.radius >= 1000:
@@ -350,6 +384,7 @@
         {if len(anomaly) > 0: 
             {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
         }
         
         {if reportbody.tidallylocked = false:
@@ -358,6 +393,7 @@
             {if len(anomaly) > 0: 
                 {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                 {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
             }
         }
         
@@ -367,6 +403,7 @@
             {if len(anomaly) > 0: 
                 {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                 {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
             }
         }
         
@@ -379,9 +416,20 @@
         {if len(anomaly) > 0: 
             {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
             {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+            {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
         }
     }
+    
+    {if len(planetSummaries) > 0:
+        {set shortSummary to cat(reportbody.bodytype, " ", Spacialise(reportbody.shortname), " has ", List(planetSummaries), ". ")}
         
+        {set currentSummary to state.notable_system_summary}
+        {if !currentSummary:
+            {set currentSummary to ""}
+        }
+        {SetState("notable_system_summary", cat(currentSummary, shortSummary))}
+    }
+    
     {_ Speech Output _}
     {if len(planetAnomalies) > 0:
     
@@ -403,24 +451,6 @@
         {if state.extended_percentile != 0:
             It has {List(planetDescriptions)}.
         }
-    }
-    
-    {if find(reportbody.planettype, "Ammonia world") >= 0:
-        This body is an uncommon type of planet classified as an ammonia world. These planets are similar to other terrestrial atmospheric planets, but are unique in that they have ammonia-based life and  large amounts of liquid ammonia at the surface. Ammonia worlds like this one possess an active weather system similar to Earth's, but with destructive storms producing liquid ammonia and methane rain.
-    |elif find(reportbody.planettype, "Earth-like world") >= 0:
-        This body is a rare type of planet classified as an earth-like world. These planets are extremely similar to Earth in the sol system, with diverse carbon-based life and abundant liquid water at the surface.
-    |elif find(reportbody.planettype, "Water world") >= 0:
-        This body is a rare type of planet classified as a water world. These planets have abundant liquid water at the surface, but no landmasses or solid ground. Water worlds like this one possess an active weather system similar to Earth's, including massive destructive cyclones that traverse the planet's oceans.
-    |elif find(reportbody.planettype, "ammonia‑based life") >= 0:
-        This is fascinating commander. I am detecting signs of life within an ammonia cloud layer deep in the atmosphere of this planet. It would appear that this layer also contains an excess of oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton floating within it. These organisms appear to behave similarly to algae on Earth, and are feeding off the intense radiation hitting this planet.
-    |elif find(reportbody.planettype, "water‑based life") >= 0:
-        This is fascinating commander. I am detecting signs of life within a cloud layer deep in the atmosphere of this planet. It would appear that this layer also contains an excess of oxygen and carbon-based compounds - likely a biproduct of what appear to be radioplankton floating within it. These organisms appear to behave similarly to algae on Earth, and are feeding off the intense radiation hitting this planet.
-    |elif find(reportbody.planettype, "helium-rich") >= 0:
-        This planet has a greatly inflated percentage of helium compared to the hydrogen in its atmosphere. Helium giants like this one form in hotter areas of star systems, which contributes to the rapid loss of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
-    |elif find(reportbody.planettype, "helium") >= 0:
-        This planet has lost most of the hydrogen in its atmosphere due to its unusually low mass compared to other gas giants. Helium giants like this one form in hotter areas of star systems, which contributes to the rapid loss of hydrogen. These planets are extremely rare, making this one a truly exceptional find.
-    |elif find(reportbody.planettype, "water giant") >= 0:
-        This body is an uncommon type of planet classified as a water giant, and likely formed when a large icy body warmed up enough for its surface ice to evaporate into water vapor. This would have triggered a runaway greenhouse effect leading to a very thick atmosphere made up of ice crystals and water vapor.
     }
     
     {F("[EXTRA SCIENCE] Body Volcanism Report")}

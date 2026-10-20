@@ -2,9 +2,21 @@
     I'm not sure which system you are asking about.
 |else:
     
+    {_ Check if the system is completely devoid of planets _}
+    {set planetCount to 0}
+    {for body in system.bodies:
+        {if body.bodytype = "Planet" || body.bodytype = "Moon":
+            {set planetCount to planetCount + 1}
+        }
+    }
+    
     {if state.edcopilot > 0:
-        {F("[EXTRA SCIENCE] Notable Bodies")}
-        {F("[EXTRA SCIENCE] Body Detail Report")}
+        {if planetCount = 0:
+            
+        |else:
+            {F("[EXTRA SCIENCE] Notable Bodies")}
+            {F("[EXTRA SCIENCE] Body Detail Report")}
+        }
     }
     
     {_ Set up empty arrays to hold our anomaly reports _}
@@ -135,6 +147,17 @@
             {set speech to cat("Bodies ", List(closeOrbits), " are orbiting remarkably close to other bodies in the system.")}
         }
         {set finalSpeech to cat(finalSpeech, [speech])}
+    }
+    
+
+    
+    {_ Check if any anomalies were saved during the system scan _}
+    {if state.notable_system_summary && state.notable_system_summary != "":
+        {set speech to cat("Notable bodies were detected across the system: ", state.notable_system_summary)}
+        {set finalSpeech to cat(finalSpeech, [speech])}
+        
+        {_ Wipe the slate clean for the next star system _}
+        {SetState("notable_system_summary", "")}
     }
     
     {_ Read the final grouped report _}

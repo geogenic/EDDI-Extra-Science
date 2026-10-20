@@ -51,7 +51,7 @@ Set to 2 if want to hear extended info for every body. _}
 {_ Set to 1 if you want to only hear atmosphere composition percentages for landable planets with atmospheres _}
 {_ Set to 2 if you want to hear atmosphere composition percentages for all planets with atmospheres (including gas giants) _}
 
-{SetState('report_pressure', 1)}
+{SetState('report_pressure', 2)}
 {_ Set to 0 if you don't want to hear about the surface pressure of atmospheric planets _}
 {_ Set to 1 if you want to hear surface pressure only for landable planets with atmospheres _}
 {_ Set to 2 if you want to hear surface pressure for all planets with atmospheres (excluding gas giants) _}
@@ -72,7 +72,7 @@ Set to 2 if want to hear extended info for every body. _}
 {_ MAIN SCRIPT _}
 {_ ---------------------------------------------------------------------------------------------- _}
 
-Welcome back {F("Honorific")}. Extra Science configuration options loaded.
+{OneOf("Welcome back", "Good to see you again", "Greetings", "Hello", "Oh seven")} {F("Honorific")}. Extra Science configuration options loaded.
 
 {SetState('reportmats', 2)}
 {SetState('eddi_context_last_subject', 'load_game')}

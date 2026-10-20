@@ -90,18 +90,18 @@
         
         {_ Map custom scientific names for specific gases _}
         {if find(topGas, "Helium") >= 0: 
-            {set gasName to cat("noble gasses, with the highest concentration being ", topGas)}
+            {set gasName to OneOf(cat("noble gases, with the highest concentration being ", topGas), cat("noble gases, primarily ", topGas), cat("inert gases, with the highest concentration being ", topGas), cat("inert gases, primarily ", topGas), cat("aerogens, with the highest concentration being ", topGas), cat("aerogens, primarily ", topGas))}
         |elif find(topGas, "Water") >= 0: 
             {set gasName to OneOf("water vapor", "water")}
         |elif find(topGas, "Hydrogen") >= 0: 
-            {set gasName to "hydrogen"}
+            {set gasName to OneOf("hydrogen", "dihydrogen", "molecular hydrogen")}
         |else:
             Anomaly found. Fix the script to include this exception!
         }
 
         {_ Output the dynamic description _}
         {if topGasPercent <= 65:
-            This planet's clouds have a mixed chemical composition with no single compound contributing more than two thirds of their volume, but exhibit characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} {reportbody.atmosphere} atmosphere.
+            This planet's clouds have a {OneOf("mixed", "blended", "varying", "diverse", "heterogenous", "hybrid")} chemical composition with no single compound contributing more than two thirds of their volume, but exhibit characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} {reportbody.atmosphere} atmosphere.
         |else:
             {OneOf("This planet's clouds are mainly composed of {gasName}", "This planet's clouds are rich in {gasName}", "This planet's clouds contain high levels of {gasName}")}.
         }
@@ -109,41 +109,43 @@
         .
     
         {if state.report_atmo_comp > 1:
-            {OneOf("scans indicate", "readings show")}
+            {OneOf("scans show", "readings show", "reflectivity scans show", "ionization scans show", "spectrometry shows", "long-range scans show")}
         
             {if round(reportbody.atmospherecompositions[0].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[0].percent, 1) < 3:
-                    trace amounts of {reportbody.atmospherecompositions[0].composition}.
+                    trace amounts of {reportbody.atmospherecompositions[0].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition}.
+                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition},
                 }
             }           
             {if round(reportbody.atmospherecompositions[1].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[1].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[1].composition}.
+                    trace amounts {reportbody.atmospherecompositions[1].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition}.
+                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition},
                 }
             }
             {if round(reportbody.atmospherecompositions[2].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[2].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[2].composition}.
+                    trace amounts {reportbody.atmospherecompositions[2].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition}.
+                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition},
                 }
             }
             {if round(reportbody.atmospherecompositions[3].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[3].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[3].composition}.
+                    trace amounts {reportbody.atmospherecompositions[3].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition}.
+                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition},
                 }
             }
         }
         
+        .
+        
         {set temp to: {TempCalc(smartRound(reportbody.temperature))}}
         {if find(temp, "-") >= 0: 
-            {set temp to cat(temp*-1, tempscale, " below zero")}
+            {set temp to OneOf(cat(temp*-1, tempscale, " below zero"), cat(" negative " temp*-1, tempscale))}
         |elif temp >= 800:
             {set temp to cat(Humanise(temp), tempscale)}
         |else:
@@ -151,32 +153,32 @@
         }
         
         {if state.report_temp > 1:
-            . The atmosphere has an average temperature of {temp}. 
+            . {OneOf("The atmosphere has", "The clouds have", "Thermal imaging of the cloud layers shows", "Infrared scans of the cloud layers show", "Thermal imaging of the atmosphere shows", "Infrared scans of the atmosphere show")} an average temperature of {temp}. 
             
             {if reportbody.temperature >= 500 && reportbody.temperature < 1000:
-                {OneOf("Yeowch!", "Hot enough to fry an egg.")}
+                {OneOf("Yeowch!", "Hot enough to fry an egg.", "Hotter than the boiling point of water.", "Nice and toasty.")}
             }
             {if reportbody.temperature >= 1000:
-                {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!")}
+                {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!", "Nice and toasty.")}
             }
         }
         
         {if state.report_gas_giant_class = 1:
             {if find(reportbody.planettype, "Class I gas") >= 0:
-                This body qualifies as a Sudarsky class one gas giant, analogous to Jupiter and Saturn in the Sol system. Deeper scans show distinct cloud layers containing ammonia, ammonium hydrosulfide, and condensed carbon compounds.
+                . This body {OneOf("qualifies as a", "is a", "is classified as a", "meets the criteria for a")} {Occasionally(3, "Sudarsky")} class one gas giant, {OneOf("analogous", "similar", "comparable", "akin")} to Jupiter and Saturn in the Sol system. {OneOf("Deeper", "Further", "Detailed", "Tight-beam")} scans show {OneOf("distinct", "discrete")} cloud layers {OneOf("containing", "of", "formed of", "composed of")} ammonia, {OneOf("ammonium hydrosulfide", "ammonium bisulfide", "ammonium hydrogen sulfide")}, and {OneOf("condensed", "solidified")} carbon compounds.
             |elif find(reportbody.planettype, "Class II gas") >= 0:
-                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing water ice crystals.
+                . This body {OneOf("qualifies as a", "is a", "is classified as a", "meets the criteria for a")} {Occasionally(3, "Sudarsky")} {reportbody.planettype}. {OneOf("Deeper", "Further", "Detailed", "Tight-beam")} scans show {OneOf("distinct", "discrete")} cloud layers {OneOf("containing", "of", "formed of", "composed of")} {OneOf("water ice crystals", "crystalline water ice", "frozen water")}.
             |elif find(reportbody.planettype, "Class III gas") >= 0:
-                This body qualifies as a Sudarsky {reportbody.planettype}, having no distinct cloud layers, and with most of the lower atmosphere composed of methane. These planets may have an appearance similar to Uranus or Neptune in the Sol system, but have an entirely different chemical composition.
+                . This body {OneOf("qualifies as a", "is a", "is classified as a", "meets the criteria for a")} {Occasionally(3, "Sudarsky")} {reportbody.planettype}, having no {OneOf("distinct", "discrete")} cloud layers, and with most of the lower atmosphere composed of methane. These planets may have an appearance {OneOf("analogous", "similar", "comparable", "akin")} to Uranus or Neptune in the Sol system, but have an entirely different chemical composition.
             |elif find(reportbody.planettype, "Class IV gas") >= 0:
-                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing carbon monoxide, sodium, and potassium. Lower in the atmosphere, trace amounts of silicates, iron, and alkali metals are present.
+                . This body {OneOf("qualifies as a", "is a", "is classified as a", "meets the criteria for a")} {Occasionally(3, "Sudarsky")} {reportbody.planettype}. {OneOf("Deeper", "Further", "Detailed", "Tight-beam")} scans show {OneOf("distinct", "discrete")} cloud layers {OneOf("containing", "of", "formed of", "composed of")} carbon monoxide, sodium {Occasionally(2, "vapor")}, and potassium {Occasionally(2, "vapor")}. Lower in the atmosphere, trace amounts of silicates, iron, and alkali metals are present.
             |elif find(reportbody.planettype, "Class V gas") >= 0:
-                This body qualifies as a Sudarsky {reportbody.planettype}. Deeper scans show distinct cloud layers containing sillicate and iron compounds, formed at the higher temperatures this planet is experiencing.
-            |elif find(reportbody.planettype, "ammonia‑based life") >= 0:
+                . This body {OneOf("qualifies as a", "is a", "is classified as a", "meets the criteria for a")} {Occasionally(3, "Sudarsky")} {reportbody.planettype}. {OneOf("Deeper", "Further", "Detailed", "Tight-beam")} scans show {OneOf("distinct", "discrete")} cloud layers {OneOf("containing", "of", "composed of")} sillicate and {OneOf("iron", "ferrous")} {OneOf("compounds", "aggregates", "composites")}, formed at the {OneOf("higher", "elevated", "super hot", "unusually hot", "extraordinarily hot")} temperatures this planet is experiencing.
+            |elif find(reportbody.planettype, "ammonia based life") >= 0:
                 
             |elif find(reportbody.planettype, "Water giant") >= 0:
                 
-            |elif find(reportbody.planettype, "water‑based life") >= 0:
+            |elif find(reportbody.planettype, "water based life") >= 0:
                 
             |elif find(reportbody.planettype, "Helium gas giant") >= 0:
                 
@@ -188,14 +190,14 @@
         }
         
         {if state.report_orbit > 1:
-            This planet has an orbital period
+            This planet has {OneOf("an orbital period", "an orbit duration", "an orbital cycle", "an orbit interval")}
             
             {if round(reportbody.orbitalperiod/365, 2) >= 0.9 && round(reportbody.orbitalperiod/365, 2) <= 1.1:
-                roughly equivalent to one Earth year.
+                {OneOf("roughly equivalent to one Earth year", "approximately equivalent to one Earth year", "comparable to one Earth year")}.
             |elif round(reportbody.orbitalperiod/365, 2) < 0.9:
-                of {smartRound(reportbody.orbitalperiod)} earth days.
+                equivalent to {smartRound(reportbody.orbitalperiod)} earth days.
             |elif round(reportbody.orbitalperiod/365, 2) > 1.1:
-                of {smartRound(reportbody.orbitalperiod/365)} earth years.
+                equivalent to {smartRound(reportbody.orbitalperiod/365)} earth years.
             }
         }
             
@@ -204,7 +206,7 @@
         {_ All other atmospheric bodies _}
         
         {if reportbody.pressure < 0.1:
-            {set pressdesc to OneOf("trace gas", "super thin")}
+            {set pressdesc to OneOf("trace gas", "super thin", "tenuous", "ephemeral")}
         |elif reportbody.pressure < 0.25:
             {set pressdesc to "very thin"}
         |elif reportbody.pressure < 0.5:
@@ -216,73 +218,75 @@
         |elif reportbody.pressure < 50:
             {set pressdesc to OneOf("dense", "very thick")}
         |elif reportbody.pressure < 100:
-            {set pressdesc to OneOf("very dense", "super thick")}
+            {set pressdesc to OneOf("very dense", "super thick", "heavy")}
         |elif reportbody.pressure >= 100:
-            {set pressdesc to OneOf("crushing", "super dense")}
+            {set pressdesc to OneOf("crushing", "super dense", "brutally heavy", "staggeringly heavy", "extremely thick")}
         }
         
         {_ Map custom scientific names for specific gases _}
         {if find(topGas, "Methane") >= 0: 
-            {set gasName to OneOf("hydrogen carbide, commonly known as methane", "methane")}
+            {set gasName to OneOf("hydrogen carbide, commonly known as methane", "methane", "carbon tetrahydride, commonly known as methane", "methyl hydride, commonly known as methane")}
         |elif find(topGas, "Ammonia") >= 0: 
-            {set gasName to OneOf("hydrogen nitride, commonly known as ammonia", "ammonia")}
+            {set gasName to OneOf("hydrogen nitride, commonly known as ammonia", "ammonia", "nitrogen hydride, commonly known as ammonia")}
         |elif find(topGas, "Car") >= 0: 
-            {set gasName to OneOf("carbon oxides, mainly carbon dioxide", "carbon dioxide", "C O 2")}
+            {set gasName to OneOf("carbon oxides, mainly carbon dioxide", "carbon dioxide", "C O 2", "carbonic anhydride, commonly known as carbon dioxide")}
         |elif find(topGas, "Nitrogen") >= 0: 
-            {set gasName to OneOf("nitrous oxides, mainly nitrogen", "nitrogen")}
+            {set gasName to OneOf("nitrous oxides, mainly nitrogen", "nitrogen", "molecular nitrogen")}
         |elif find(topGas, "Helium") >= 0 || find(topGas, "Argon") >= 0 || find(topGas, "Neon") >= 0: 
-            {set gasName to cat("noble gasses, with the highest concentration being ", topGas)}
+            {set gasName to OneOf(cat("noble gases, with the highest concentration being ", topGas), cat("noble gases, primarily ", topGas), cat("inert gases, with the highest concentration being ", topGas), cat("inert gases, primarily ", topGas), cat("aerogens, with the highest concentration being ", topGas), cat("aerogens, primarily ", topGas))}
         |elif find(topGas, "Water") >= 0: 
             {set gasName to OneOf("water vapor", "water")}
         |elif find(topGas, "Silicate") >= 0: 
-            {set gasName to OneOf("silicate vapors", "silicates", "silicon dioxide vapor")}
+            {set gasName to OneOf("silicate vapors", "silicates", "silicon dioxide vapor", "crystalline silicates")}
         |elif find(topGas, "Sulphur") >= 0: 
-            {set gasName to OneOf("sulfur oxides and sulfuric acids", "sulfur dioxide", "sulfuric compounds")}
+            {set gasName to OneOf("sulfur oxides and sulfuric acids", "sulfur dioxide", cat("sulfuric ", OneOf("compounds", "aggregates", "composites")))}
         |elif find(topGas, "Oxygen") >= 0: 
-            {set gasName to "oxygen"}
+            {set gasName to OneOf("oxygen", "molecular oxygen")}
         |else:
             Anomaly found. Fix the script to include this exception!
         }
 
         {_ Output the dynamic description _}
         {if topGasPercent <= 65:
-            This planet's atmosphere has a mixed composition with no single compound contributing more than two thirds of it's volume, but exhibits characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} atmosphere.
+            This planet's atmosphere has a {OneOf("mixed", "blended", "varying", "diverse", "heterogenous", "hybrid")} composition with no single compound contributing more than two thirds of it's volume, but exhibits characteristics similar to {if StartsWithVowel(reportbody.atmosphere): an |else: a } {reportbody.atmosphere} atmosphere.
         |else:
             {OneOf("This planet's {pressdesc} atmosphere is composed of {gasName}", "This planet's {pressdesc} atmosphere is rich in {gasName}", "This planet's {pressdesc} atmosphere contains high levels of {gasName}")}.
         }
         
         {if (state.report_atmo_comp > 0 && reportbody.landable = true) || state.report_atmo_comp > 1:
-            {OneOf("scans indicate", "readings show")}
+            {OneOf("scans show", "readings show", "reflectivity scans show", "ionization scans show", "spectrometry shows", "long-range scans show")}
             
             {if round(reportbody.atmospherecompositions[0].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[0].percent, 1) < 3:
-                    trace amounts of {reportbody.atmospherecompositions[0].composition}.
+                    trace amounts of {reportbody.atmospherecompositions[0].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition}.
+                    {smartRound(reportbody.atmospherecompositions[0].percent)} percent {reportbody.atmospherecompositions[0].composition},
                 }
             }           
             {if round(reportbody.atmospherecompositions[1].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[1].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[1].composition}.
+                    trace amounts {reportbody.atmospherecompositions[1].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition}.
+                    {smartRound(reportbody.atmospherecompositions[1].percent)} percent {reportbody.atmospherecompositions[1].composition},
                 }
             }
             {if round(reportbody.atmospherecompositions[2].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[2].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[2].composition}.
+                    trace amounts {reportbody.atmospherecompositions[2].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition}.
+                    {smartRound(reportbody.atmospherecompositions[2].percent)} percent {reportbody.atmospherecompositions[2].composition},
                 }
             }
             {if round(reportbody.atmospherecompositions[3].percent, 1) > 0:
                 {if round(reportbody.atmospherecompositions[3].percent, 1) < 3:
-                    trace amounts {reportbody.atmospherecompositions[3].composition}.
+                    trace amounts {reportbody.atmospherecompositions[3].composition},
                 |else:
-                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition}.
+                    {smartRound(reportbody.atmospherecompositions[3].percent)} percent {reportbody.atmospherecompositions[3].composition},
                 }
             }
         }
+        
+        .
         
         {if (state.report_pressure > 0 && reportbody.landable = true) || state.report_pressure > 1:
             It has surface pressure
@@ -300,7 +304,7 @@
             |elif reportbody.pressure >= 0.1 && reportbody.pressure < 0.5:
                 of {smartRound(reportbody.pressure*101.325)} kilopascals, or less than half of Earth's.
             |elif reportbody.pressure >= 0.5 && reportbody.pressure < 0.75:
-                of {smartRound(reportbody.pressure*101.325)} kilopascals,
+                of {smartRound(reportbody.pressure*101.325)} kilopascals, or less than three quarters of Earth's.
             |elif round(reportbody.pressure*101.325, 2) = 0:
                 of {smartRound(reportbody.pressure*101.325)} kilopascals, despite the fact that this planet is also shown to have an atmosphere. All bodies with this specific appearance apparently  have bugged surface pressure values in game, meaning that I had to find a way to write an exception for this rare type of planet into my script. Thanks Frontier.
             |elif reportbody.pressure < 0.01:
@@ -516,10 +520,10 @@
             {if len(dayColors) > 0 && len(sunsetColors) > 0:
                 {if tertiaryContributes:
                     {_ Three gases are present and over 20% _}
-                    This {reportbody.planettype} will appear from the surface as having some combination of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                    This {reportbody.planettype} will appear from the surface as having {OneOf("some combination", "a mix", "a blend")} of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
                 |elif secondaryContributes:
                     {_ Two gases are present and over 20% _}
-                    This {reportbody.planettype} will appear from the surface as having some combination of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
+                    This {reportbody.planettype} will appear from the surface as having {OneOf("some combination", "a mix", "a blend")} of {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
                 |elif secondaryGas && secondaryGas != "":
                     {_ Secondary gas exists, but is under 20% _}
                     This {reportbody.planettype} will appear from the surface as having {List(dayColors)} skies during the day, and {List(sunsetColors)} skies at sunrise and sunset.
@@ -538,13 +542,13 @@
     {set prelimSurfScan to 0}
     {if (reportbody.landable = true && topGasPercent > 0 && state.report_temp > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp > 2) || (reportbody.landable = false && state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
     
-        Preliminary surface scans show
+        {cat(OneOf("Preliminary surface scans ", "Preliminary thermal scans of the surface ", "Preliminary infrared scans of the surface "), " ", OneOf("show", "indicate"), " ")}
         
         {set prelimSurfScan to 1}
         
         {set temp to: {TempCalc(smartRound(reportbody.temperature))}}
         {if find(temp, "-") >= 0: 
-            {set temp to cat(temp*-1, tempscale, " below zero")}
+            {set temp to OneOf(cat(temp*-1, tempscale, " below zero"), cat(" negative " temp*-1, tempscale))}
         |elif temp >= 800:
             {set temp to cat(Humanise(temp), tempscale)}
         |else:
@@ -557,21 +561,21 @@
             {set absSolar to reportbody.solarday}
         }
         
-        an average surface temperature of {temp}.
+        an average temperature of {temp}.
         
-        {if reportbody.temperature > 500 && reportbody.temperature < 1000:
-            {OneOf("Yeowch!", "Hot enough to fry an egg.")}
+        {if reportbody.temperature >= 500 && reportbody.temperature < 1000:
+            {OneOf("Yeowch!", "Hot enough to fry an egg.", "Hotter than the boiling point of water.", "Nice and toasty.")}
         }
-        {if reportbody.temperature > 1000:
-            {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!")}
+        {if reportbody.temperature >= 1000:
+            {OneOf("Yeowch!", "Hot enough to vaporise an egg instantly. Yum!", "Hotter than some class T stars!", "Nice and toasty.")}
         }
     }
     
     {if reportbody.landable = true:
-        {Occasionally(4, "Need to stretch your legs commander?")}
+        {Occasionally(4, OneOf("Time to stretch your legs commander.", "Time for a hike commander.", "Time for your daily Armstrong moment commander.", "Dust off your Artemis suit commander."))}
         {if state.report_temp = 0 || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_temp < 3) || (reportbody.landable = false && state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_temp < 2 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0):
             {if prelimSurfScan = 0:
-                Preliminary surface scans show that
+                {cat(OneOf("Preliminary surface scans ", "Preliminary thermal scans of the surface ", "Preliminary infrared scans of the surface "), " ", OneOf("show", "indicate"), " ")}
                 {set prelimSurfScan to 1}
             }
         {reportbody.bodytype} {Spacialise(reportbody.shortname)} is landable with survivable surface conditions and surface gravity {ToFraction(smartRound(reportbody.gravity))} Earth's.
@@ -633,10 +637,10 @@
 
     {if (reportbody.tidallylocked = false && isMoon = false && !isBinaryPair) && ((reportbody.landable = true && topGasPercent > 0 && state.report_orbit > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_orbit > 2) || (reportbody.landable = false && state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0)):
     
-        One day on this body is
+        One {OneOf("day", "diurnal cycle")} on this body is
         
         {if round(absSolar*24, 1) >= 23 && round(absSolar*24, 1) <= 25:
-            roughly equivalent to one Earth day     
+            {OneOf("roughly equivalent to one Earth day", "approximately equivalent to one Earth day", "comparable to one Earth day")}.   
         |elif (round(absSolar*24, 1) > 25 && round(absSolar*24, 1) < 48) || (round(absSolar*24, 1) < 23):
             {smartRound(absSolar*24)} hours long
         |elif round(absSolar*24, 1) >= 48 && round(absSolar, 1) < 365:
@@ -647,20 +651,20 @@
     
         {if reportbody.landable = true:
             {if round(((absSolar/2)*24), 1) >= 48 && round(((absSolar/2)*24), 1) < 365:
-                with an average of {smartRound((absSolar/2))} earth days worth of daylight from sunrise to sunset at the equator,
+                with {OneOf("an average", "a median")} of {smartRound((absSolar/2))} earth days worth of daylight from sunrise to sunset at the equator,
             }
             {if round(((absSolar/2)*24), 1) < 48:
-                with an average of {smartRound(((absSolar/2)*24))} hours of daylight from sunrise to sunset at the equator,
+                with {OneOf("an average", "a median")} of {smartRound(((absSolar/2)*24))} hours of daylight from sunrise to sunset at the equator,
             }
             {if round(((absSolar/2)), 1) >= 365:
-                with an average of {smartRound(((absSolar/2)/365))} earth years worth of daylight from sunrise to sunset at the equator,
+                with {OneOf("an average", "a median")} of {smartRound(((absSolar/2)/365))} earth years worth of daylight from sunrise to sunset at the equator,
             }
         }
         
-        and one orbital period is
+        and {OneOf("an orbital period", "an orbit duration", "an orbital cycle", "an orbit interval")}
         
         {if round(reportbody.orbitalperiod/365, 2) >= 0.9 && round(reportbody.orbitalperiod/365, 2) <= 1.1:
-            roughly equivalent to one Earth year.
+            {OneOf("roughly equivalent to one Earth year", "approximately equivalent to one Earth year", "comparable to one Earth year")}.
         |elif round(reportbody.orbitalperiod/365, 2) < 0.9:
             equivalent to {smartRound(reportbody.orbitalperiod)} earth days.
         |elif round(reportbody.orbitalperiod/365, 2) > 1.1:
@@ -668,9 +672,9 @@
         }
          
         {if reportbody.landable = true:
-            {Occasionally(4, "Time to watch a sunrise perhaps?")}
+            {Occasionally(4, "Time to watch a sunrise perhaps.")}
              
-            A full sunrise or sunset on this {reportbody.bodytype} at the equator would last approximately
+            A full sunrise or sunset on this {reportbody.bodytype} at the equator would last {OneOf("approximately", "around", "roughly")}
          
             {if round(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)), 1) >= 1:
                 {smartRound(((((absSolar*24)/24)/(absSolar*24))*(absSolar*24)))} hours.
@@ -682,7 +686,7 @@
         }
          
     |elif reportbody.tidallylocked = true && ((reportbody.landable = true && topGasPercent > 0 && state.report_orbit > 0) || (reportbody.landable = true && reportbody.pressure < 0.001 && state.report_orbit > 2) || (reportbody.landable = false && state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0) || (state.report_orbit > 1 && topGasPercent > 0 && find(reportbody.planettype, "giant") < 0)):
-        This body has no sunrises or sunsets - it is tidally locked and has no day night cycle.
+        This body has no sunrises or sunsets - it is tidally locked and has no {OneOf("day night", "diurnal")} cycle.
     }
 }
 
@@ -690,27 +694,27 @@
 
 { if topGasPercent > 0 && find(reportbody.planettype, "giant") < 0 && state.report_climate = 1:
     {if (reportbody.temperature-273.15) >= -100 && (reportbody.temperature-273.15) < -20:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification E F, polar, and will have yearly temperatures similar to Antarctica or Northern Greenland.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification E F, polar, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Antarctica or Northern Greenland.
     }
     {if (reportbody.temperature-273.15) >= -20 && (reportbody.temperature-273.15) < 5:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification E T, Tundra, and will have yearly temperatures similar to the Prince Edward Islands, Nuuk in Greenland, or Svalbard in Norway.
+        This {reportbody.bodytype} has a climate closest to the Koppen Classification E T, Tundra, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to the Prince Edward Islands, Nuuk in Greenland, or Svalbard in Norway.
     }
     {if (reportbody.temperature-273.15) >= 5 && (reportbody.temperature-273.15) < 10:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F C, Subpolar, and will have yearly temperatures similar to Iceland, the Auckland Islands, or Tierra del Fuego in Argentina.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} to the Koppen Classification C F C, Subpolar, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Iceland, the Auckland Islands, or Tierra del Fuego in Argentina.
     }
     {if (reportbody.temperature-273.15) >= 10 && (reportbody.temperature-273.15) < 15 && find(reportbody.planettype, "Icy") < 0:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F B, Temperate, and will have yearly temperatures similar to the Netherlands, Spain, or Vancouver in British Columbia.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification C F B, Temperate, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to the Netherlands, Spain, or Vancouver in British Columbia.
     }
     {if (reportbody.temperature-273.15) >= 15 && (reportbody.temperature-273.15) < 20 && find(reportbody.planettype, "Icy") < 0:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification C F B, Subtropical, and will have yearly temperatures similar to Asunción in Paraguay, Brisbane in Australia, or Atlanta in the United States.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification C F B, Subtropical, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Asunción in Paraguay, Brisbane in Australia, or Atlanta in the United States.
     }
     {if (reportbody.temperature-273.15) >= 20 && (reportbody.temperature-273.15) < 28 && find(reportbody.planettype, "Icy") < 0:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification A F, tropical, and will have yearly temperatures similar to Florida...Hawaii, or Pago Pago in American Samoa.
+        This {reportbody.bodytype} has{OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification A F, tropical, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Florida...Hawaii, or Pago Pago in American Samoa.
     }
     {if (reportbody.temperature-273.15) >= 28 && (reportbody.temperature-273.15) < 38 && find(reportbody.planettype, "Icy") < 0:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification A S, savannah, and will have yearly temperatures similar to Mombasa in Kenya, Lagos in Nigeria, or Kigali in Rwanda.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification A S, savannah, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Mombasa in Kenya, Lagos in Nigeria, or Kigali in Rwanda.
     }
     {if (reportbody.temperature-273.15) >= 38 && (reportbody.temperature-273.15) < 60 && find(reportbody.planettype, "Icy") < 0:
-        This {reportbody.bodytype} has a climate closest to the Koppen Classification B W H, hot desert, and will have yearly temperatures similar to Egypt, Death Valley in California, or Riyadh in Saudi Arabia.
+        This {reportbody.bodytype} has {OneOf("a climate", "an environment", "surface conditions")} closest to the Koppen Classification B W H, hot desert, and will have {OneOf("yearly", "annual")} temperatures {OneOf("analogous", "similar", "comparable", "akin")} to Egypt, Death Valley in California, or Riyadh in Saudi Arabia.
     }
 }            

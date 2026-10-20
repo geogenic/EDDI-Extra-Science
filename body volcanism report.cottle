@@ -9,7 +9,7 @@
 |else:
     {if (reportbody.volcanism || len(reportbody.volcanism) > 0):
         
-        Thermal imaging shows
+        {OneOf("Thermal imaging shows", "Sensors detect", "F L I R imaging shows", "Infrared scans show")}
 
         {if reportbody.volcanism.type = "Geysers":
             {if reportbody.volcanism.invariantAmount = 'Major':
@@ -25,10 +25,10 @@
             |elif reportbody.volcanism.invariantAmount = 'Minor':
                 {OneOf("low levels of", "minor", "a low amount of", "localized")}
             }
-            active {reportbody.volcanism.composition} 
+            active
             {OneOf(
                 "lava flows {Occasionally(2, 'at the surface')}",
-                OneOf("magma flows near the surface", "sub-surface magma flows")
+                OneOf("{reportbody.volcanism.composition}-based magma flows near the surface", "sub-surface {reportbody.volcanism.composition}-based magma flows")
             )}
         }
         .

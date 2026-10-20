@@ -14,8 +14,9 @@
 {_ Process the event _}
 {Pause(3000)}
 
-{OneOf("Mapping", "Surface Map")}
-{OneOf("is", "is now")}
+{OneOf("Mapping", "Surface map", "Surface scan")}
+of {reportbody.bodytype} {Spacialise(reportbody.shortname)} 
+{OneOf("is", "is now", " ")}
 {OneOf("complete", "finished")}.
 
 {if event.probesused <= event.efficiencytarget:
@@ -55,7 +56,7 @@
 
     {_ On-foot hazards _}
     {if lethalTemp || lethalGrav:
-        Take caution when disembarking. This {reportbody.planettype} has 
+        Take {OneOf("caution", "care")} when {OneOf("disembarking", "leaving your ship")}. This {reportbody.planettype} has 
         {if lethalTemp && lethalGrav:
             surface temperatures and gravity that exceed
         |elif lethalTemp:
@@ -63,16 +64,16 @@
         |else:
             surface gravity that exceeds
         }
-        the limits of your exploration suit, and will be acutely hazardous to your health.
+        the limits of your {OneOf("exploration suit", "artemis suit", "suit", "exosuit", "protective gear")} , and will be {OneOf("acutely", "severely", "critically", "seriously")} hazardous to your health.
     }
 
     {_ Flight hazards _}
     {if hardLanding:
-        This planet's high surface gravity will
+        This planet's {OneOf("high", "elevated", "strong")} surface gravity will
         {if lethalTemp || lethalGrav:
             also
         }
-        make landing here a challenge. Be sure to descend slowly once you are out of glide.
+        make landing here {OneOf("a challenge", "difficult", "quite arduous")} . Be sure to descend {OneOf("slowly", "gently", "at a leisurely pace")} once you are out of glide.
     }
 }
 

@@ -94,41 +94,47 @@
         
         {if zScore > 3.0:
             {return [
-                cat("99 point ninth Percentile for ", statName), 
-                cat("an extraordinarily ", highAdj, " ", statName, " of ", valString)
+                "percentile": cat("99 point ninth Percentile for ", statName), 
+                "desc": cat("an extraordinarily ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("an extraordinarily ", highAdj, " ", statName)
             ]}
         |elif zScore > 2.0:
             {return [
-                cat("98th Percentile for ", statName), 
-                cat("a very ", highAdj, " ", statName, " of ", valString)
+                "percentile": cat("98th Percentile for ", statName), 
+                "desc": cat("a very ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("a very ", highAdj, " ", statName)
             ]}
         |elif zScore > 1.0:
             {return [
-                cat("84th Percentile for ", statName), 
-                cat("an unusually ", highAdj, " ", statName, " of ", valString)
+                "percentile": cat("84th Percentile for ", statName), 
+                "desc": cat("an unusually ", highAdj, " ", statName, " of ", valString),
+                "summary": cat("an unusually ", highAdj, " ", statName)
             ]}
         |elif zScore < -3.0 && lowAdj != "":
             {return [
-                cat("bottom one tenth of one percent for ", statName), 
-                cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString)
+                "percentile": cat("bottom one tenth of one percent for ", statName), 
+                "desc": cat("an extraordinarily ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("an extraordinarily ", lowAdj, " ", statName)
             ]}
         |elif zScore < -2.0 && lowAdj != "":
             {return [
-                cat("2nd Percentile for ", statName), 
-                cat("a very ", lowAdj, " ", statName, " of ", valString)
+                "percentile": cat("2nd Percentile for ", statName), 
+                "desc": cat("a very ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("a very ", lowAdj, " ", statName)
             ]}
         |elif zScore < -1.0 && lowAdj != "":
             {return [
-                cat("16th Percentile for ", statName), 
-                cat("an unusually ", lowAdj, " ", statName, " of ", valString)
+                "percentile": cat("16th Percentile for ", statName), 
+                "desc": cat("an unusually ", lowAdj, " ", statName, " of ", valString),
+                "summary": cat("an unusually ", lowAdj, " ", statName)
             ]}
         }
         
-        {_ Return a completely empty array if the planet is average _}
+        {_ Return a completely empty array if the star is average _}
         {return []}
     }
     
-    {_ Define individual planet profiles _}
+    {_ Define individual star profiles _}
     {set ABlueWhiteSuperGiant to ["meanMag": -6.3632, "stdMag": 6.979, "meanAge": 276.6211, "stdAge": 383.5253, "meanTilt": 0, "stdTilt": 0.0027, "meanEcc": 0.1555, "stdEcc": 0.1961, "meanInc": 0.218, "stdInc": 45.3386, "meanOrbPer": 335090.7142, "stdOrbPer": 816482.876, "meanRotPer": 38.0569, "stdRotPer": 62.2784, "meanSolMass": 14.1404, "stdSolMass": 25.6286, "meanSolRad": 102.5079, "stdSolRad": 166.8194, "meanTemp": 9999.47, "stdTemp": 10993.9944]}
     
     {set A to ["meanMag": 2.6988, "stdMag": 2.7287, "meanAge": 1469.1929, "stdAge": 1693.2802, "meanTilt": 0, "stdTilt": 0.0078, "meanEcc": 0.1512, "stdEcc": 0.1931, "meanInc": -0.0102, "stdInc": 44.9895, "meanOrbPer": 663212.6978, "stdOrbPer": 1545529.7555, "meanRotPer": 1.1266, "stdRotPer": 1.5281, "meanSolMass": 1.6572, "stdSolMass": 1.7047, "meanSolRad": 1.3836, "stdSolRad": 2.66, "meanTemp": 8090.9088, "stdTemp": 8105.3394]}
@@ -235,9 +241,9 @@
     {for reportbody in system.bodies:
         {if reportbody.stellarclass:
             {if reportbody.stellarclass = "SuperMassiveBlackHole":
-                Sagittarius A scanned. Whoa. That thing is big.
+                {OneOf("Sagittarius A scanned. Whoa. That thing is big.", "Sagittarius A scanned. Let's not see how far down the rabbit hole goes commander.", "Sagittarius A scanned. Before you get any ideas, let's try not to recreate that scene from Interstellar. I'm not interested in loving through any bookcases right now.", "Sagittarius A scanned. That's the biggest hole I've ever seen. Don't take that out of context.", "Sagittarius A scanned. We're going to need a bigger boat commander.", "Sagittarius A scanned. Take caution on the surface and when landing commander, this body has- just kidding. Stay far far away from that monstrosity.", "Sagittarius A scanned. I could really go for some spaghettification right now. Maybe with a nice home made marinara and some gamma radiation sprinkled on top.")}
             |elif reportbody.stellarclass = "X" || reportbody.stellarclass = "RoguePlanet" || reportbody.stellarclass = "Nebula" || reportbody.stellarclass = "StellarRemnantNebula":
-                Unknown significant stellar body detected. Report this finding to the developer immediately.
+                Unknown significant stellar body detected. Report this finding to the appropriate channels immediately.
             }
             {_ Identify specific short descriptions dynamically within the loop _}
             {if find(["L", "T", "Y"], reportbody.stellarclass) > -1:
@@ -291,6 +297,7 @@
             {_ Initialize the custom data dictionaries _}
             {set planetAnomalies to []}
             {set planetDescriptions to []}
+            {set planetSummaries to []}
         
             {_ Calculate Z-Scores _}
             {if has(astroData, reportbody.stellarclass):
@@ -300,8 +307,9 @@
                     {set massString to cat(smartRound(reportbody.solarmass), " solar masses")}
                     {set anomaly to findAnomaly(reportbody.solarmass, current["meanSolMass"], current["stdSolMass"], "mass", "high", "low", massString)}
                     {if len(anomaly) > 0: 
-                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
-                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
 
@@ -309,8 +317,9 @@
                     {set radString to cat(smartRound(reportbody.solarradius), " times sol's radius")}
                     {set anomaly to findAnomaly(reportbody.solarradius, current["meanSolRad"], current["stdSolRad"], "solar radius", "large", "small", radString)}
                     {if len(anomaly) > 0: 
-                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
-                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
              
@@ -318,8 +327,9 @@
                     {set rotPerString to formatTime(reportbody.rotationalperiod, "days")}
                     {set anomaly to findAnomaly(reportbody.rotationalperiod, current["meanRotPer"], current["stdRotPer"], "rotational period length", "long", "short", rotPerString)}
                     {if len(anomaly) > 0: 
-                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
-                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
                  
@@ -333,6 +343,7 @@
                     {if len(anomaly) > 0: 
                         {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
                         {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
                 
@@ -340,8 +351,9 @@
                     {set magString to smartRound(reportbody.absolutemagnitude)}
                     {set anomaly to findAnomaly(reportbody.absolutemagnitude, current["meanMag"], current["stdMag"], "absolute magnitude", "dim", "bright", magString)}
                     {if len(anomaly) > 0: 
-                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
-                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
                 
@@ -353,8 +365,9 @@
                     }
                     {set anomaly to findAnomaly(reportbody.age, current["meanAge"], current["stdAge"], "age", "old", "young", ageString)}
                     {if len(anomaly) > 0: 
-                        {set planetAnomalies to cat(planetAnomalies, [anomaly[0]])}
-                        {set planetDescriptions to cat(planetDescriptions, [anomaly[1]])}
+                        {set planetAnomalies to cat(planetAnomalies, [anomaly["percentile"]])}
+                        {set planetDescriptions to cat(planetDescriptions, [anomaly["desc"]])}
+                        {set planetSummaries to cat(planetSummaries, [anomaly["summary"]])}
                     }
                 }
                  
@@ -370,7 +383,7 @@
                 {_ Check if this specific star triggered any anomalies _}
                 {if len(planetAnomalies) > 0:
                     {_ Stitch the intro and the anomaly descriptions together _}
-                    {set starReport to cat(introPhrase, "It is in the ", List(planetAnomalies), " compared to other stars of its type. It has ", List(planetDescriptions), ".")}
+                    {set starReport to cat(introPhrase, ". It is in the ", List(planetAnomalies), " compared to other stars of its type. It has ", List(planetDescriptions), ".")}
                 |else:
                     {_ If it's a completely average star, just use the intro phrase _}
                     {set starReport to introPhrase}
@@ -378,6 +391,16 @@
                 
                 {_ Shove the finished report into the master system array _}
                 {set systemAnomalies to cat(systemAnomalies, [starReport])}
+                
+                {if len(planetSummaries) > 0:
+                    {set shortSummary to cat("Stellar body ", reportname, " has ", List(planetSummaries), ". ")}
+                    
+                    {set currentSummary to state.notable_system_summary}
+                    {if !currentSummary:
+                        {set currentSummary to ""}
+                    }
+                    {SetState("notable_system_summary", cat(currentSummary, shortSummary))}
+                }
             }
         }
     }
